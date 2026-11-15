@@ -44,10 +44,10 @@ export function createHud(scene) {
     if (key === lastKey) return;
     lastKey = key;
     const g = score.g;
-    plate(g, 768, 192, beatFlash > 0 ? '#ffe21f' : '#22e6ff');
+    plate(g, 768, 192, beatFlash > 0 ? '#ffc24a' : '#4ea0ff');
     comic(g, String(s).padStart(6, '0'), 300, 100, 104, '#ffffff');
-    comic(g, 'x' + mult, 640, 86, 96, mult >= 6 ? '#ff2bd0' : mult >= 3 ? '#ffb020' : '#22e6ff');
-    comic(g, beatFlash > 0 ? 'ON BEAT!' : combo + ' COMBO', 640, 152, 30, beatFlash > 0 ? '#ffe21f' : '#9fb0c8', '#000', 0.2);
+    comic(g, 'x' + mult, 640, 86, 96, mult >= 6 ? '#ff8a2a' : mult >= 3 ? '#ffb020' : '#4ea0ff');
+    comic(g, beatFlash > 0 ? 'ON BEAT!' : combo + ' COMBO', 640, 152, 30, beatFlash > 0 ? '#ffc24a' : '#9fb0c8', '#000', 0.2);
     score.tex.needsUpdate = true;
   }
   function onBeat() { beatFlash = 0.35; }
@@ -57,28 +57,28 @@ export function createHud(scene) {
     if (!kind || kind === infoKind) return;
     infoKind = kind;
     const g = info.g;
-    plate(g, 1024, 512, kind === 'results' ? '#ffe21f' : kind === 'uzi' ? '#ff2bd0' : '#22e6ff');
+    plate(g, 1024, 512, kind === 'results' ? '#ffc24a' : kind === 'uzi' ? '#ff8a2a' : '#4ea0ff');
     if (kind === 'loading') {
-      comic(g, 'GUN RUN', 512, 190, 150, '#ffe21f');
+      comic(g, 'GUN RUN', 512, 190, 150, '#ffc24a');
       comic(g, 'LOADING TRACK…', 512, 350, 52, '#ffffff');
     } else if (kind === 'ready') {
-      comic(g, 'GUN RUN', 512, 130, 150, '#ffe21f');
+      comic(g, 'GUN RUN', 512, 130, 150, '#ffc24a');
       comic(g, 'PULL THE TRIGGER TO START', 512, 262, 54, '#ffffff');
-      comic(g, 'Shoot the drones before they reach you', 512, 350, 36, '#22e6ff', '#000', 0.2);
-      comic(g, 'Kill on the beat for bonus points', 512, 404, 36, '#ff2bd0', '#000', 0.2);
+      comic(g, 'Shoot the drones before they reach you', 512, 350, 36, '#4ea0ff', '#000', 0.2);
+      comic(g, 'Kill on the beat for bonus points', 512, 404, 36, '#ff8a2a', '#000', 0.2);
     } else if (kind === 'intro') {
-      comic(g, 'DRONES INBOUND', 512, 130, 104, '#ff4530');
+      comic(g, 'DRONES INBOUND', 512, 130, 104, '#e8452e');
       comic(g, 'One trigger pull = one shot', 512, 248, 44, '#ffffff', '#000', 0.2);
-      comic(g, 'Kill on the beat for bonus points', 512, 318, 44, '#ffe21f', '#000', 0.2);
-      comic(g, 'Don\'t let them touch you — it breaks your combo', 512, 398, 34, '#22e6ff', '#000', 0.2);
+      comic(g, 'Kill on the beat for bonus points', 512, 318, 44, '#ffc24a', '#000', 0.2);
+      comic(g, 'Don\'t let them touch you — it breaks your combo', 512, 398, 34, '#4ea0ff', '#000', 0.2);
     } else if (kind === 'uzi') {
-      comic(g, 'UZIS ONLINE', 512, 190, 140, '#ff2bd0');
+      comic(g, 'UZIS ONLINE', 512, 190, 140, '#ff8a2a');
       comic(g, 'HOLD THE TRIGGERS — FULL AUTO', 512, 350, 52, '#ffffff');
     } else if (kind === 'results') {
-      comic(g, 'RUN COMPLETE', 512, 76, 74, '#ffe21f');
+      comic(g, 'RUN COMPLETE', 512, 76, 74, '#ffc24a');
       comic(g, String(data.score).padStart(6, '0'), 400, 210, 150, '#ffffff');
-      comic(g, data.rank, 850, 210, 230, data.rank === 'S' ? '#ff2bd0' : '#22e6ff');
-      comic(g, `DRONES ${data.kills}/${data.total}   ON BEAT ${data.onBeat}`, 512, 340, 40, '#22e6ff', '#000', 0.2);
+      comic(g, data.rank, 850, 210, 230, data.rank === 'S' ? '#ff8a2a' : '#4ea0ff');
+      comic(g, `DRONES ${data.kills}/${data.total}   ON BEAT ${data.onBeat}`, 512, 340, 40, '#4ea0ff', '#000', 0.2);
       comic(g, `MAX COMBO ${data.maxCombo}   ACCURACY ${data.acc}%   HITS TAKEN ${data.hits}`, 512, 396, 34, '#ffffff', '#000', 0.2);
       comic(g, 'pull the trigger to ride again', 512, 458, 30, '#9fb0c8', '#000', 0.2);
     }

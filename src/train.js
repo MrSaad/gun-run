@@ -4,7 +4,7 @@ import { toon } from './materials.js';
 
 // The train is fixed to the player; the world slides past it. Roof top is y = 0.
 export function buildTrain(scene) {
-  const steel = 0x4a5263, dark = 0x2a2e39, roof = 0x596275, haz = 0xf2b21c, cyan = 0x22e6ff, red = 0xff3b1f;
+  const steel = 0x4a5263, dark = 0x2a2e39, roof = 0x596275, haz = 0xf08a24, cyan = 0x4ea0ff, red = 0xff3b1f;
   const parts = [];
   const car = (z0, z1, lead) => {
     const len = z1 - z0, cz = (z0 + z1) / 2;

@@ -4,7 +4,7 @@ import { toon } from './materials.js';
 
 // Barrel points down -Z. Origin is roughly where the controller's pointer ray starts.
 function pistolGeometry() {
-  const steel = 0x8791a6, dark = 0x2a2e3a, accent = 0xff8a12, cyan = 0x22e6ff;
+  const steel = 0x8791a6, dark = 0x2a2e3a, accent = 0xff8a12, cyan = 0x4ea0ff;
   return merge([
     box(0.046, 0.062, 0.3, [0, 0.01, -0.13], steel),                       // slide
     box(0.036, 0.036, 0.26, [0, -0.035, -0.12], dark),                     // frame
@@ -18,7 +18,7 @@ function pistolGeometry() {
   ]);
 }
 function uziGeometry() {
-  const steel = 0x767f93, dark = 0x23262f, accent = 0xff2bd0, hot = 0xffb020;
+  const steel = 0x767f93, dark = 0x23262f, accent = 0xff8a2a, hot = 0xffa040;
   return merge([
     box(0.05, 0.085, 0.27, [0, 0.0, -0.09], steel),                        // receiver
     box(0.028, 0.028, 0.13, [0, 0.0, -0.285], dark),                       // barrel

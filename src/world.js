@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { B, BEAT, S, V1, TUNNELS, CITIES, TRACK_A, TRACK_B, rng, speedAtBeat } from './timeline.js';
-import { G, toon, buildingMaterial, tunnelMaterial, deckMaterial, groundMaterial, skyMaterial, signMaterial, rainMaterial, col } from './materials.js';
+import { G, toon, buildingMaterial, tunnelMaterial, deckMaterial, groundMaterial, skyMaterial, signMaterial, rainMaterial, trafficMaterial, col } from './materials.js';
 
 const DECK_Y = -4.0;
 const GROUND_Y = -60;
@@ -8,19 +8,19 @@ const GROUND_Y = -60;
 const PROFILE = [[-5, -4.3], [-5, 3.0], [-3.2, 5.2], [3.2, 5.2], [5, 3.0], [5, -4.3]];
 
 const TUNNEL_STYLE = [
-  { colA: 0x22e6ff, colB: 0xff9a1f, wall: 0x39424d, ring: 0x22e6ff, ringDown: 0xffffff, v: V1 },
-  { colA: 0xff2bd0, colB: 0x22e6ff, wall: 0x40364d, ring: 0xff2bd0, ringDown: 0x22e6ff, v: V1 },
-  { colA: 0xff3b1f, colB: 0xffb020, wall: 0x4a3434, ring: 0xff3b1f, ringDown: 0xffd040, v: 2 * V1 },
+  { colA: 0x4ea0ff, colB: 0xff9a1f, wall: 0x39424d, ring: 0x4ea0ff, ringDown: 0xffffff, v: V1 },
+  { colA: 0xff8a2a, colB: 0x4ea0ff, wall: 0x453c34, ring: 0xff8a2a, ringDown: 0x4ea0ff, v: V1 },
+  { colA: 0xff4a1f, colB: 0xffa040, wall: 0x4a3434, ring: 0xff4a1f, ringDown: 0xffc878, v: 2 * V1 },
   { colA: 0xffd27a, colB: 0xffffff, wall: 0xf2e9d8, ring: 0xffe9b0, ringDown: 0xffffff, v: 25, self: 1 },
 ];
 
 const ENV = {
-  t1: { fog: [0.012, 0.03, 0.04], near: 15, far: 240, amb: [0.1, 0.13, 0.15], lc: [0.1, 0.13, 0.15], ld: [0, 1, 0.25], storm: 0, rain: 0 },
-  city1: { fog: [0.15, 0.055, 0.21], near: 60, far: 1000, amb: [0.36, 0.32, 0.52], lc: [0.5, 0.5, 0.8], ld: [-0.45, 0.6, -0.65], storm: 0, rain: 0 },
-  t2: { fog: [0.035, 0.01, 0.045], near: 15, far: 240, amb: [0.13, 0.1, 0.15], lc: [0.13, 0.1, 0.15], ld: [0, 1, 0.25], storm: 0.5, rain: 0 },
-  city2: { fog: [0.11, 0.06, 0.22], near: 60, far: 950, amb: [0.34, 0.32, 0.54], lc: [0.45, 0.5, 0.85], ld: [-0.45, 0.6, -0.65], storm: 0.6, rain: 0 },
+  t1: { fog: [0.012, 0.022, 0.045], near: 15, far: 240, amb: [0.1, 0.12, 0.16], lc: [0.1, 0.12, 0.16], ld: [0, 1, 0.25], storm: 0, rain: 0 },
+  city1: { fog: [0.075, 0.095, 0.17], near: 60, far: 1000, amb: [0.3, 0.35, 0.5], lc: [0.45, 0.52, 0.8], ld: [-0.45, 0.6, -0.65], storm: 0, rain: 0 },
+  t2: { fog: [0.04, 0.022, 0.01], near: 15, far: 240, amb: [0.15, 0.115, 0.09], lc: [0.15, 0.115, 0.09], ld: [0, 1, 0.25], storm: 0.5, rain: 0 },
+  city2: { fog: [0.06, 0.08, 0.16], near: 60, far: 950, amb: [0.29, 0.34, 0.5], lc: [0.42, 0.5, 0.82], ld: [-0.45, 0.6, -0.65], storm: 0.6, rain: 0 },
   t3: { fog: [0.045, 0.012, 0.008], near: 15, far: 260, amb: [0.15, 0.1, 0.09], lc: [0.15, 0.1, 0.09], ld: [0, 1, 0.25], storm: 1, rain: 0 },
-  city3: { fog: [0.075, 0.07, 0.19], near: 30, far: 620, amb: [0.32, 0.34, 0.52], lc: [0.4, 0.48, 0.8], ld: [-0.45, 0.6, -0.65], storm: 1, rain: 1 },
+  city3: { fog: [0.05, 0.07, 0.14], near: 30, far: 620, amb: [0.29, 0.34, 0.5], lc: [0.4, 0.48, 0.8], ld: [-0.45, 0.6, -0.65], storm: 1, rain: 1 },
   t4: { fog: [1.0, 0.95, 0.84], near: 4, far: 190, amb: [1, 1, 1], lc: [0.25, 0.25, 0.25], ld: [0, 1, 0.25], storm: 1, rain: 0 },
 };
 function envForBeat(b) {
@@ -40,7 +40,7 @@ function makeSignAtlas() {
   const g = cv.getContext('2d');
   const words = ['NEON', 'RAMEN', '24H', 'CYBER', 'BAR', 'HOTEL', 'NOODLE', 'ARCADE', 'SYNTH', 'GUN RUN', '777', 'DATA', 'OPEN', 'VOID', 'TAXI', 'PAWN',
     'NO SIGNAL', 'KARAOKE', 'CHROME', 'SUSHI', 'MOTEL', 'LIVE', 'ZERO', 'EXIT', 'MEGA', 'CLINIC', 'BLACK MAGIC', 'TATTOO', 'GHOST', 'VOLT', 'OMNI', '>>>'];
-  const cols = ['#22e6ff', '#ff2bd0', '#ffb020', '#7dff3a', '#ff4530', '#b06bff'];
+  const cols = ['#ff8a2a', '#4ea0ff', '#ffe2b8', '#ff8a2a', '#4ea0ff', '#e8452e'];
   g.fillStyle = '#05050c'; g.fillRect(0, 0, 1024, 1024);
   for (let i = 0; i < 32; i++) {
     const x = (i % 4) * 256, y = Math.floor(i / 4) * 128;
@@ -131,7 +131,7 @@ export function buildWorld(scene) {
     }));
     mesh.frustumCulled = false; group.add(mesh);
     const len = t.b - t.a, cz = -(t.a + t.b) / 2, W = 260, TOP = 190;
-    const tint = i === 3 ? 0x2a2a3a : 0x1b1b2a;
+    const tint = i === 3 ? 0x2a2a3a : 0x151b27;
     push('build', -(5.4 + W / 2), (TOP + GROUND_Y) / 2, cz, W, TOP - GROUND_Y, len, tint);
     push('build', (5.4 + W / 2), (TOP + GROUND_Y) / 2, cz, W, TOP - GROUND_Y, len, tint);
     push('build', 0, (TOP + 5.5) / 2, cz, 10.8, TOP - 5.5, len, tint);
@@ -150,7 +150,7 @@ export function buildWorld(scene) {
       }
       push('prop', 0, 9.2, zf, 20, 3.4, 3.4, 0x2a2f3c);
       push('prop', 0, 13.5, zf, 26, 1.2, 2.4, 0x3a4250);
-      for (let q = -3; q <= 3; q++) push('glow', q * 2.2, 9.2, zf - out * 1.8, 1.3, 1.3, 0.2, q % 2 ? 0xffd040 : 0x15151c);
+      for (let q = -3; q <= 3; q++) push('glow', q * 2.2, 9.2, zf - out * 1.8, 1.3, 1.3, 0.2, q % 2 ? 0xffe6c0 : 0x15151c);
     }
     // services running the length of the tunnel: pipes, ducts, catwalks
     if (i < 3) {
@@ -185,12 +185,12 @@ export function buildWorld(scene) {
         push('prop', sx * 3.95, 0.15, -sm, 0.07, 1.0, 0.07, 0x8a7a2a);
         push('prop', sx * 3.95, 0.15, -s, 0.07, 1.0, 0.07, 0x8a7a2a);
         push('prop', sx * 4.8, 2.0, -sm, 0.3, 0.9, 0.7, 0x4a5262);
-        push('glow', sx * 4.62, 2.2, -sm, 0.05, 0.12, 0.12, ((k % 2) + 2) % 2 ? 0x7dff3a : 0xff3b1f);
+        push('glow', sx * 4.62, 2.2, -sm, 0.05, 0.12, 0.12, ((k % 2) + 2) % 2 ? 0xffe6c0 : 0xff3b1f);
       }
       if (mod(k, 4) === 2) { // service doors with exit lights
         const sx = mod(k, 8) === 2 ? 1 : -1;
         push('prop', sx * 4.9, 0.85, -sm - 2, 0.2, 2.3, 1.5, 0x55606f);
-        push('glow', sx * 4.85, 2.25, -sm - 2, 0.12, 0.3, 1.1, 0x7dff3a);
+        push('glow', sx * 4.85, 2.25, -sm - 2, 0.12, 0.3, 1.1, 0xffe6c0);
       }
     }
   };
@@ -208,7 +208,7 @@ export function buildWorld(scene) {
   }
 
   // ---- city: buildings
-  const tints = [0x1c1c2e, 0x232338, 0x191926, 0x2a2440, 0x1d2633];
+  const tints = [0x161c2a, 0x1c2433, 0x121722, 0x222a38, 0x1a2230];
   const billboards = [];
   const tint = () => tints[(r() * tints.length) | 0];
   const building = (x, s, w, d, top, kind) => {
@@ -231,7 +231,7 @@ export function buildWorld(scene) {
       }
       if (r() < 0.35) { // side fin sign
         const sgn = x > 0 ? -1 : 1;
-        push('glow', x + sgn * (w / 2 + 0.6), top - 8 - r() * 20, z, 0.5, 14 + r() * 14, 1.6, [0x22e6ff, 0xff2bd0, 0xffb020][(r() * 3) | 0]);
+        push('glow', x + sgn * (w / 2 + 0.6), top - 8 - r() * 20, z, 0.5, 14 + r() * 14, 1.6, [0x4ea0ff, 0xff8a2a, 0xffa040][(r() * 3) | 0]);
       }
     }
     if (kind !== 'sky') { // rooftop clutter: AC units, tanks, vents
@@ -240,7 +240,7 @@ export function buildWorld(scene) {
         const uw = 2 + r() * 4, uh = 1.2 + r() * 2.5, ud = 2 + r() * 4;
         const ux = x + (r() - 0.5) * (rw - uw) * 0.9, uz = z + (r() - 0.5) * (rd - ud) * 0.9;
         push('prop', ux, ry + uh / 2, uz, uw, uh, ud, r() < 0.5 ? 0x3d4352 : 0x4a4038);
-        if (r() < 0.3) push('glow', ux, ry + uh + 0.12, uz, uw * 0.6, 0.2, ud * 0.6, 0x22e6ff);
+        if (r() < 0.3) push('glow', ux, ry + uh + 0.12, uz, uw * 0.6, 0.2, ud * 0.6, 0x4ea0ff);
       }
       if (r() < 0.4) { // water tank on legs
         const ux = x + (r() - 0.5) * rw * 0.5, uz = z + (r() - 0.5) * rd * 0.5;
@@ -295,12 +295,12 @@ export function buildWorld(scene) {
         push('prop', sx * 4.7, -3.4, -s, 0.8, 1.0, 0.8, 0x2c313d);                    // footing
         push('prop', sx * 4.0, 4.6, -s, 1.9, 0.18, 0.18, 0x39404f, 0, 0, sx * 0.75);  // knee brace
         push('prop', sx * 3.0, 4.75, -s + 0.1, 0.45, 0.8, 0.3, 0x20232c);             // signal head
-        push('glow', sx * 3.0, 4.75, -s + 0.27, 0.22, 0.22, 0.05, sx > 0 ? 0x7dff3a : 0xff3b1f);
+        push('glow', sx * 3.0, 4.75, -s + 0.27, 0.22, 0.22, 0.05, sx > 0 ? 0xffe6c0 : 0xff3b1f);
       }
       push('prop', 0, 5.4, -s, 10.4, 0.45, 0.45, gc);
       push('prop', 0, 5.95, -s, 10.4, 0.12, 0.12, gc);
       for (let q = -4; q <= 4; q += 2) push('prop', q, 5.68, -s, 0.1, 0.45, 0.1, gc, 0, 0, 0.5);
-      push('glow', 0, 5.08, -s, down ? 9.0 : 6.0, 0.16, 0.22, down ? 0xffd040 : (Math.floor(k / 4) % 2 ? 0xff2bd0 : 0x22e6ff));
+      push('glow', 0, 5.08, -s, down ? 9.0 : 6.0, 0.16, 0.22, down ? 0xffe6c0 : (Math.floor(k / 4) % 2 ? 0xff8a2a : 0x4ea0ff));
       // sign between gantries, alternating sides
       const ks = k + c.step / 2;
       if (ks < c.k1 - 1) {
@@ -324,9 +324,9 @@ export function buildWorld(scene) {
         push('prop', 0, 13.1, -so + 6.3, 420, 1.0, 0.4, 0x3a3f4d);
         for (const sx of [-1, 1]) {
           for (const px of [22, 80, 150]) push('prop', sx * px, (GROUND_Y + 10.4) / 2, -so, 4.5, 10.4 - GROUND_Y, 6, 0x20222c);
-          push('glow', sx * 60, 10.3, -so, 100, 0.14, 0.5, 0xffb020);
+          push('glow', sx * 60, 10.3, -so, 100, 0.14, 0.5, 0xffa040);
         }
-        push('glow', 0, 10.3, -so + 6.4, 18, 0.3, 0.2, 0xff2bd0);
+        push('glow', 0, 10.3, -so + 6.4, 18, 0.3, 0.2, 0xff8a2a);
         for (let q = 0; q < 14; q++) push('glow', -200 + q * 31 + (q % 3) * 4, 13.0, -so + (q % 2 ? 3 : -3), 2.4, 0.5, 1.1, q % 2 ? 0xfff2c0 : 0xff3b1f); // traffic
       }
     }
@@ -349,12 +349,71 @@ export function buildWorld(scene) {
   inst('prop', unit, toon({ ink: true, detail: 0.45 }));
   const glowMesh = inst('glow', unit, toon({ allGlow: true, beatGlow: 0.6 }));
   // flat two-tone halo around every neon element (cheap stand-in for bloom)
-  const halo = new THREE.InstancedMesh(unit, toon({ halo: 0.3, haloStrength: 0.26 }), lists.glow.length);
+  const halo = new THREE.InstancedMesh(unit, toon({ halo: 0.3, haloStrength: 0.17 }), lists.glow.length);
   halo.instanceMatrix = glowMesh.instanceMatrix; halo.instanceColor = glowMesh.instanceColor;
   halo.frustumCulled = false; halo.renderOrder = 2; group.add(halo);
   const signGeo = new THREE.PlaneGeometry(1, 1);
   const signMesh = inst('sign', signGeo, signMaterial(makeSignAtlas()));
   signMesh.geometry.setAttribute('aCell', new THREE.InstancedBufferAttribute(new Float32Array(lists.sign.map((s) => s.extra)), 1));
+
+  // ---- flying traffic lanes through the city
+  {
+    const tr = rng(4242);
+    const A = [], Bv = [], Pp = [], Cc = [];
+    const CREAM = [1.0, 0.9, 0.75], RED = [1.0, 0.27, 0.13], BLUE = [0.36, 0.63, 1.0], AMBER = [1.0, 0.6, 0.25];
+    const lane = (ax, ay, az, bx, by, bz, spacing, speed, colr) => {
+      const len = Math.hypot(bx, by, bz), n = Math.max(1, Math.floor(len / spacing));
+      for (let i = 0; i < n; i++) {
+        A.push(ax, ay, az); Bv.push(bx, by, bz);
+        Pp.push((i + tr() * 0.7) / n, speed / len);
+        const c = tr() < 0.12 ? BLUE : colr; Cc.push(c[0], c[1], c[2]);
+      }
+    };
+    for (const c of CITIES) {
+      const len = c.b - c.a - 30, z0 = -(c.a + 15);
+      for (const side of [-1, 1]) {
+        for (let q = 0; q < 3; q++) { // lanes running with the track, one each way
+          const x = side * (26 + q * 24 + tr() * 10), y = 6 + q * 16 + tr() * 10;
+          lane(x, y, z0 - len, 0, 0, len, 42 + tr() * 30, 45 + tr() * 30, CREAM);          // oncoming: headlights
+          lane(x + side * 5, y + 3, z0, 0, 0, -len, 42 + tr() * 30, 45 + tr() * 30, RED);  // same way: tail-lights
+        }
+      }
+      for (let s = c.a + 60; s < c.b - 60; s += 150 + tr() * 160) { // lanes crossing over the track
+        const y = 15 + tr() * 45, dir = tr() < 0.5 ? 1 : -1;
+        lane(-340 * dir, y, -s, 680 * dir, 0, 0, 30 + tr() * 25, 40 + tr() * 30, tr() < 0.5 ? AMBER : CREAM);
+        lane(340 * dir, y + 4, -s - 7, -680 * dir, 0, 0, 30 + tr() * 25, 40 + tr() * 30, RED);
+      }
+    }
+    const tg = new THREE.InstancedBufferGeometry();
+    tg.index = unit.index; tg.setAttribute('position', unit.attributes.position);
+    tg.setAttribute('aA', new THREE.InstancedBufferAttribute(new Float32Array(A), 3));
+    tg.setAttribute('aB', new THREE.InstancedBufferAttribute(new Float32Array(Bv), 3));
+    tg.setAttribute('aP', new THREE.InstancedBufferAttribute(new Float32Array(Pp), 2));
+    tg.setAttribute('aCol', new THREE.InstancedBufferAttribute(new Float32Array(Cc), 3));
+    tg.instanceCount = Pp.length / 2;
+    const traffic = new THREE.Mesh(tg, trafficMaterial());
+    traffic.frustumCulled = false; group.add(traffic);
+  }
+
+  // ---- searchlights sweeping the cloud base (far away, follow the camera like the sky)
+  const beams = new THREE.Group(); scene.add(beams);
+  {
+    const br = rng(99);
+    const mat = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, toneMapped: false, side: THREE.DoubleSide });
+    for (let i = 0; i < 7; i++) {
+      const az = (br() - 0.5) * 3.6, d = 650 + br() * 500, L = 900, w = 26 + br() * 22;
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, -w, L, 0, w, L, 0], 3));
+      const warm = i % 3 === 0;
+      g.setAttribute('color', new THREE.Float32BufferAttribute(warm ? [0.2, 0.13, 0.07, 0, 0, 0, 0, 0, 0] : [0.1, 0.15, 0.24, 0, 0, 0, 0, 0, 0], 3));
+      const m = new THREE.Mesh(g, mat);
+      m.position.set(Math.sin(az) * d, -70, -Math.cos(az) * d);
+      m.rotation.y = -az;
+      m.userData = { ph: br() * 6.28, sp: 0.25 + br() * 0.35, amp: 0.25 + br() * 0.3 };
+      m.frustumCulled = false; m.renderOrder = -5;
+      beams.add(m);
+    }
+  }
 
   // ---- sky
   const sky = new THREE.Mesh(new THREE.SphereGeometry(2200, 24, 12), skyMaterial());
@@ -396,7 +455,7 @@ export function buildWorld(scene) {
       }
       for (let i = 0; i < segs; i++) {
         const a = pts[i], b = pts[i + 1];
-        quad(a[0], a[1], a[2], b[0], b[1], b[2], w * 3.2, 0.42, 0.3, 1.0, 0);
+        quad(a[0], a[1], a[2], b[0], b[1], b[2], w * 3.2, 0.3, 0.5, 1.0, 0);
         quad(a[0], a[1], a[2], b[0], b[1], b[2], w, 1, 1, 1, 2);
       }
       return pts;
@@ -436,6 +495,8 @@ export function buildWorld(scene) {
   function update(dt, t, beat, dist, camPos, playing) {
     group.position.z = dist;
     sky.position.copy(camPos);
+    beams.position.copy(camPos);
+    for (const m of beams.children) m.rotation.z = Math.sin(t * m.userData.sp + m.userData.ph) * m.userData.amp;
 
     const e = envForBeat(beat);
     const k = first ? 1 : 1 - Math.exp(-dt * 5);

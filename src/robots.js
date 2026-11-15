@@ -6,7 +6,7 @@ import { toon } from './materials.js';
 const MAX = 40;
 
 function robotGeometry() {
-  const body = 0x6d7689, dark = 0x2b2f3b, haz = 0xf28a1c, red = 0xff2a1a, cyan = 0x35e8ff;
+  const body = 0x6d7689, dark = 0x2b2f3b, haz = 0xf28a1c, red = 0xff2a1a, cyan = 0x4ea0ff;
   const cyl = new THREE.CylinderGeometry(1, 1, 1, 10);
   return merge([
     { geo: new THREE.IcosahedronGeometry(0.42, 1), color: body, ink: false, flat: true },

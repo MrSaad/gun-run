@@ -50,7 +50,7 @@ export function createFx(scene, camera) {
   let starI = 0;
 
   // comic words
-  const texY = WORDS.map((w) => wordTexture(w, '#ffe21f'));
+  const texY = WORDS.map((w) => wordTexture(w, '#ffc24a'));
   const words = [];
   for (let i = 0; i < 5; i++) {
     const m = new THREE.Mesh(new THREE.PlaneGeometry(2, 1), new THREE.MeshBasicMaterial({ map: texY[0], transparent: true, fog: false, toneMapped: false, depthWrite: false }));

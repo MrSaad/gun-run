@@ -119,7 +119,7 @@ vec3 pointLights(vec3 wpos, vec3 n){
 }
 vec3 grade(vec3 c){
   float l = dot(c, vec3(0.299, 0.587, 0.114));
-  c = mix(vec3(l), c, 0.68);            // pull saturation down
+  c = mix(vec3(l), c, 0.78);            // pull saturation down
   return c * 0.95 / (1.0 + 0.1 * l);    // and take the edge off the brightest neon
 }
 vec3 applyFog(vec3 c, float dist){
@@ -280,7 +280,7 @@ export function buildingMaterial() {
       varying vec3 vLocal; varying float vSeed; varying float vTop; varying vec3 vTint;
       uniform sampler2D uDetail;
       vec3 pal(float h){
-        return h < 0.4 ? vec3(1.0, 0.72, 0.3) : (h < 0.72 ? vec3(0.25, 0.9, 1.0) : vec3(1.0, 0.25, 0.75));
+        return h < 0.58 ? vec3(1.0, 0.6, 0.26) : (h < 0.88 ? vec3(0.34, 0.6, 1.0) : vec3(1.0, 0.9, 0.74));
       }
       void main(){
         float dist = length(vView);
@@ -295,20 +295,20 @@ export function buildingMaterial() {
         float sid = floor(vSeed * 255.0 + 0.5);
         float seed = sid / 255.0;
         float h = hash21(cell + vec2(sid * 7.0, sid * 13.0));
-        float lit = step(0.6, h);
+        float lit = step(0.66, h);
         float style = fract(seed * 11.3);
         float win = step(0.16, f.x) * step(f.x, 0.84) * step(0.25, f.y) * step(f.y, 0.8);
         if (style > 0.72) win = step(0.32, f.x) * step(f.x, 0.68) * step(0.1, f.y) * step(f.y, 0.92);          // tall slits
-        else if (style > 0.42) { win = step(0.3, f.y) * step(f.y, 0.74); lit = step(0.5, hash21(vec2(floor(cell.x / 3.0), cell.y) + sid)); } // ribbons
+        else if (style > 0.42) { win = step(0.3, f.y) * step(f.y, 0.74); lit = step(0.7, hash21(vec2(floor(cell.x / 3.0), cell.y) + sid)); } // ribbons
         lit *= 1.0 - step(0.975, h) * step(0.5, fract(uTime * (1.5 + fract(h * 53.0) * 5.0)));                   // the odd flicker
         float fw = max(fwidth(q.x), fwidth(q.y));
         float detail = 1.0 - smoothstep(0.2, 0.6, fw);
-        vec3 wcol = pal(fract(seed * 3.7 + step(0.9, h) * 0.37)) * (0.55 + 0.45 * fract(h * 17.0));
+        vec3 wcol = pal(fract(seed * 3.7 + step(0.9, h) * 0.37)) * (0.5 + 0.4 * fract(h * 17.0));
         c *= 1.0 - 0.45 * step(f.y, 0.07) * wall * detail;   // floor ledges
         c = mix(c, wcol, win * lit * wall * detail);
-        c += wcol * 0.13 * (1.0 - detail) * wall;
+        c += wcol * 0.11 * (1.0 - detail) * wall;
         // neon trim along some rooftops
-        float trim = step(vTop - 1.6, vLocal.y) * step(0.5, fract(seed * 7.3)) * wall;
+        float trim = step(vTop - 1.6, vLocal.y) * step(0.8, fract(seed * 7.3)) * wall;
         c = mix(c, pal(fract(seed * 5.1)) * (1.0 + uBeat * 0.4), trim);
         c = mix(c, INKCOL, inkEdge(vUv, dist) * 0.9);
         gl_FragColor = vec4(applyFog(c, dist), 1.0);
@@ -405,7 +405,7 @@ export function deckMaterial() {
         vec3 c = toonLit(base, 1.0) + base * pointLights(vW, vec3(0.0, 1.0, 0.0));
         // rain: puddles pick up the neon haze
         float puddle = step(0.56, texture2D(uDetail, vPos.xz * 0.045 + 0.31).r) * uRain * (1.0 - rail);
-        c = mix(c, c * 0.45 + uFogColor * 1.5 + vec3(0.1, 0.05, 0.16) * uBeat, puddle);
+        c = mix(c, c * 0.45 + uFogColor * 1.5 + vec3(0.05, 0.08, 0.16) * uBeat, puddle);
         float edge = step(4.3, ax) * step(ax, 4.6);
         c = mix(c, vec3(1.0, 0.75, 0.1) * 0.8, edge * step(0.5, fract(-vPos.z / 4.0)));
         gl_FragColor = vec4(applyFog(c, dist), 1.0);
@@ -430,7 +430,7 @@ export function groundMaterial() {
         vec2 g = abs(fract(vPos.xz / 70.0) - 0.5) * 70.0;
         float road = 1.0 - step(3.0, min(g.x, g.y));
         float dash = step(0.5, fract((vPos.x + vPos.z) / 9.0));
-        vec3 c = mix(vec3(0.03, 0.03, 0.07), vec3(0.75, 0.42, 0.12) * (0.5 + 0.5 * dash), road);
+        vec3 c = mix(vec3(0.025, 0.032, 0.06), vec3(0.6, 0.32, 0.1) * (0.4 + 0.4 * dash), road);
         c += vec3(0.1, 0.12, 0.2) * uFlash;
         gl_FragColor = vec4(applyFog(c, dist), 1.0);
       }`,
@@ -459,8 +459,8 @@ export function skyMaterial() {
         float h = clamp(d.y, 0.0, 1.0);
         float t = pow(1.0 - h, 5.0);
         t = floor(t * 7.0 + 0.5) / 7.0;                       // banded, comic-style gradient
-        vec3 top = mix(vec3(0.025, 0.02, 0.085), vec3(0.015, 0.016, 0.04), uStorm);
-        vec3 hor = mix(vec3(0.33, 0.1, 0.38), vec3(0.15, 0.1, 0.32), uStorm);
+        vec3 top = mix(vec3(0.018, 0.03, 0.085), vec3(0.012, 0.018, 0.045), uStorm);
+        vec3 hor = mix(vec3(0.42, 0.21, 0.1), vec3(0.17, 0.15, 0.2), uStorm);   // sodium glow off the city
         vec3 c = mix(top, hor, t);
         // stars
         vec2 sp = d.xz / (d.y + 0.35) * 70.0;
@@ -483,10 +483,10 @@ export function skyMaterial() {
         float th = mix(0.56, 0.4, uStorm);
         float cover = step(th, n) * smoothstep(0.02, 0.12, d.y);
         float thick = step(th + 0.1, n);
-        vec3 cl = mix(vec3(0.075, 0.06, 0.14), vec3(0.045, 0.045, 0.085), thick);
+        vec3 cl = mix(vec3(0.06, 0.08, 0.14), vec3(0.035, 0.045, 0.085), thick);
         cl = mix(cl, hor * 0.75, t * 0.9);                    // city glow on the cloud base
         cl += uFlash * vec3(0.3, 0.34, 0.55) * (1.0 - thick * 0.6);
-        c += (mcol * moon + vec3(0.6, 0.5, 0.9) * halo) * (1.0 - cover) * (1.0 - uStorm * 0.9);
+        c += (mcol * moon + vec3(0.45, 0.58, 0.9) * halo) * (1.0 - cover) * (1.0 - uStorm * 0.9);
         c = mix(c, cl, cover);
         // distant skyline silhouette with pin-prick lights
         float az = atan(d.x, -d.z);
@@ -495,9 +495,9 @@ export function skyMaterial() {
         float bx2 = az * 17.0 + 3.0, bi2 = floor(bx2);
         float bh2 = 0.02 + 0.13 * pow(h21(vec2(bi2, 2.0)), 3.0);
         vec3 haze = mix(uFogColor, hor, 0.35);
-        if (d.y < bh2) c = mix(haze, vec3(0.05, 0.035, 0.1), 0.35);
+        if (d.y < bh2) c = mix(haze, vec3(0.035, 0.045, 0.09), 0.4);
         if (d.y < bh) {
-          c = mix(uFogColor, vec3(0.03, 0.025, 0.07), 0.55);
+          c = mix(uFogColor, vec3(0.02, 0.028, 0.06), 0.6);
           vec2 wc = vec2(floor(fract(bx) * 5.0), floor(d.y * 260.0));
           float wl = step(0.82, h21(wc + bi * 13.0)) * step(0.15, fract(bx)) * step(fract(bx), 0.85);
           c += vec3(0.75, 0.5, 0.28) * wl * 0.55;
@@ -506,7 +506,7 @@ export function skyMaterial() {
         c = mix(c, uFogColor, smoothstep(0.035, 0.0, d.y));
         c += uFlash * vec3(0.2, 0.24, 0.42) * (0.3 + t);
         float l = dot(c, vec3(0.299, 0.587, 0.114));
-        c = mix(vec3(l), c, 0.72) * 0.96;
+        c = mix(vec3(l), c, 0.82) * 0.96;
         gl_FragColor = vec4(c, 1.0);
       }`,
   });
@@ -537,6 +537,28 @@ export function signMaterial(atlas) {
         vec3 c = texture2D(uMap, vUv).rgb * (1.0 + uBeat * 0.3) * (1.0 - 0.75 * buzz);
         gl_FragColor = vec4(applyFog(c, length(vView)), 1.0);
       }`,
+  });
+}
+
+// ---- flying traffic: instanced light bars that slide along lanes, animated on the GPU
+export function trafficMaterial() {
+  return new THREE.ShaderMaterial({
+    uniforms: { ...G },
+    vertexShader: /* glsl */ `
+      attribute vec3 aA; attribute vec3 aB; attribute vec2 aP; attribute vec3 aCol;
+      uniform float uTime;
+      varying vec3 vCol; varying vec3 vView;
+      void main(){
+        float f = fract(aP.x + uTime * aP.y);
+        vec3 l = position * vec3(1.3, 0.55, 3.6);
+        if (abs(aB.x) > abs(aB.z)) l = l.zyx;
+        vec4 mv = modelViewMatrix * vec4(aA + aB * f + l, 1.0);
+        vView = mv.xyz; vCol = aCol;
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: FRAG_COMMON + /* glsl */ `
+      varying vec3 vCol; varying vec3 vView;
+      void main(){ gl_FragColor = vec4(applyFog(vCol, length(vView)), 1.0); }`,
   });
 }
 
