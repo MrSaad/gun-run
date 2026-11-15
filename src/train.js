@@ -36,12 +36,38 @@ export function buildTrain(scene) {
     parts.push(box(0.5, 0.3, 0.1, [sx * 0.9, -2.9, -10.22], 0xfff2c0, { glow: 1, ink: false }));
     parts.push(box(0.12, 0.12, 0.1, [sx * 1.3, -2.3, -10.22], red, { glow: 1, ink: false }));
   }
+  // extra detail: panel seams, pipes, hatches, mast, light bar, couplers, cow-catcher
+  for (let z = -6; z < 54; z += 2.5) {
+    if (Math.abs(z) < 1.5) continue;
+    parts.push(box(2.7, 0.012, 0.05, [0, 0.008, z], 0x242832, { ink: false }));
+  }
+  for (const sx of [-1, 1]) {
+    parts.push(box(0.09, 0.09, 17, [sx * 1.18, 0.06, 4.5], 0x7a4a2a));
+    parts.push(box(0.14, 0.16, 0.3, [sx * 1.18, 0.08, -3.5], dark));
+    parts.push(box(0.14, 0.16, 0.3, [sx * 1.18, 0.08, 12.5], dark));
+    for (let z = -5; z < 13; z += 3) parts.push(box(0.05, 1.5, 0.9, [sx * 1.53, -2.3, z], 0x10131c, { ink: false })); // windows
+    parts.push(box(0.3, 0.6, 2.2, [sx * 1.3, -3.2, -9.6], haz, { rot: [0, sx * 0.35, 0] }));
+  }
+  parts.push(box(0.9, 0.06, 0.9, [0.55, 0.03, -3.6], 0x6a7388));
+  parts.push(box(0.12, 0.05, 0.4, [0.55, 0.08, -3.6], haz));
+  parts.push(box(0.9, 0.06, 0.9, [-0.5, 0.03, 4.4], 0x6a7388));
+  parts.push(box(0.06, 1.7, 0.06, [1.15, 0.85, 3.2], dark));
+  parts.push(box(0.5, 0.04, 0.04, [1.15, 1.35, 3.2], dark));
+  parts.push(box(0.12, 0.12, 0.12, [1.15, 1.76, 3.2], red, { glow: 1, ink: false }));
+  parts.push(box(0.45, 0.5, 0.45, [-1.0, 0.25, 6.2], dark));
+  parts.push(box(0.3, 0.75, 0.3, [-1.0, 0.4, 7.0], steel));
+  parts.push(box(2.2, 0.16, 0.22, [0, 0.1, -6.6], dark));
+  parts.push(box(2.0, 0.07, 0.06, [0, 0.11, -6.73], 0xfff2c0, { glow: 1, ink: false }));
+  parts.push(box(1.0, 0.8, 0.8, [0, -2.6, 13.35], dark));
+  parts.push(box(1.0, 0.8, 0.8, [0, -2.6, 34.05], dark));
+  parts.push(box(2.4, 0.7, 0.7, [0, -3.5, -10.6], dark, { rot: [0.5, 0, 0] }));
+  parts.push(box(2.2, 0.9, 0.12, [0, -1.5, -10.26], 0x10131c));
   // standing pad
   parts.push(box(1.8, 0.03, 1.8, [0, 0.015, 0], 0x343a48));
   parts.push(box(1.9, 0.02, 0.12, [0, 0.02, -0.95], haz));
   parts.push(box(1.9, 0.02, 0.12, [0, 0.02, 0.95], haz));
 
-  const mesh = new THREE.Mesh(merge(parts), toon({ vertexColors: true, ink: true, glowAttr: true, beatGlow: 0.9 }));
+  const mesh = new THREE.Mesh(merge(parts), toon({ vertexColors: true, ink: true, glowAttr: true, beatGlow: 0.9, minLit: 0.3 }));
   mesh.frustumCulled = false;
   scene.add(mesh);
   return mesh;

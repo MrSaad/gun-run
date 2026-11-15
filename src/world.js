@@ -15,11 +15,11 @@ const TUNNEL_STYLE = [
 ];
 
 const ENV = {
-  t1: { fog: [0.02, 0.05, 0.065], near: 15, far: 240, amb: [0.42, 0.5, 0.56], lc: [0.5, 0.6, 0.65], ld: [0, 1, 0.25], storm: 0, rain: 0 },
+  t1: { fog: [0.012, 0.03, 0.04], near: 15, far: 240, amb: [0.1, 0.13, 0.15], lc: [0.1, 0.13, 0.15], ld: [0, 1, 0.25], storm: 0, rain: 0 },
   city1: { fog: [0.15, 0.055, 0.21], near: 60, far: 1000, amb: [0.36, 0.32, 0.52], lc: [0.5, 0.5, 0.8], ld: [-0.45, 0.6, -0.65], storm: 0, rain: 0 },
-  t2: { fog: [0.07, 0.015, 0.085], near: 15, far: 240, amb: [0.5, 0.4, 0.56], lc: [0.6, 0.45, 0.6], ld: [0, 1, 0.25], storm: 0.5, rain: 0 },
+  t2: { fog: [0.035, 0.01, 0.045], near: 15, far: 240, amb: [0.13, 0.1, 0.15], lc: [0.13, 0.1, 0.15], ld: [0, 1, 0.25], storm: 0.5, rain: 0 },
   city2: { fog: [0.11, 0.06, 0.22], near: 60, far: 950, amb: [0.34, 0.32, 0.54], lc: [0.45, 0.5, 0.85], ld: [-0.45, 0.6, -0.65], storm: 0.6, rain: 0 },
-  t3: { fog: [0.085, 0.018, 0.012], near: 15, far: 260, amb: [0.56, 0.4, 0.36], lc: [0.65, 0.45, 0.4], ld: [0, 1, 0.25], storm: 1, rain: 0 },
+  t3: { fog: [0.045, 0.012, 0.008], near: 15, far: 260, amb: [0.15, 0.1, 0.09], lc: [0.15, 0.1, 0.09], ld: [0, 1, 0.25], storm: 1, rain: 0 },
   city3: { fog: [0.075, 0.07, 0.19], near: 30, far: 620, amb: [0.32, 0.34, 0.52], lc: [0.4, 0.48, 0.8], ld: [-0.45, 0.6, -0.65], storm: 1, rain: 1 },
   t4: { fog: [1.0, 0.95, 0.84], near: 4, far: 190, amb: [1, 1, 1], lc: [0.25, 0.25, 0.25], ld: [0, 1, 0.25], storm: 1, rain: 0 },
 };
@@ -109,17 +109,26 @@ export function buildWorld(scene) {
 
 
   // ---- tunnels: shell, megastructure around it, portal frames, beat-locked rings
-  const ringAt = (s, color, thick = 0.2, depth = 0.5, inset = 0.12) => {
+  const frameAt = (list, s, color, thick = 0.2, depth = 0.5, inset = 0.12) => {
     for (let j = 0; j < PROFILE.length - 1; j++) {
       const [x0, y0] = PROFILE[j], [x1, y1] = PROFILE[j + 1];
       const dx = x1 - x0, dy = y1 - y0, l = Math.hypot(dx, dy);
       const nx = dy / l, ny = -dx / l;
-      push('glow', (x0 + x1) / 2 + nx * inset, (y0 + y1) / 2 + ny * inset, -s, l + thick, thick, depth, color, 0, 0, Math.atan2(dy, dx));
+      push(list, (x0 + x1) / 2 + nx * inset, (y0 + y1) / 2 + ny * inset, -s, l + thick, thick, depth, color, 0, 0, Math.atan2(dy, dx));
     }
   };
+  const ringAt = (s, color, thick, depth, inset = 0.34) => frameAt('glow', s, color, thick, depth, inset);
+  const mod = (x, m) => ((x % m) + m) % m;
+  const RING_SPACING = [
+    { sp: V1 * BEAT, k: 0 }, { sp: V1 * BEAT, k: B.tunnel2 + 1 }, { sp: V1 * BEAT, k: B.tunnel3 + 1 }, { sp: 25 * BEAT, k: 412 },
+  ];
+  const PIPE = 0x4a5568, RIB = 0x3a4250;
   TUNNELS.forEach((t, i) => {
-    const st = TUNNEL_STYLE[t.kind];
-    const mesh = new THREE.Mesh(tunnelGeometry(t.a, t.b), tunnelMaterial({ period: st.v * BEAT / 4, colA: st.colA, colB: st.colB, wall: st.wall, self: st.self ?? 0 }));
+    const st = TUNNEL_STYLE[t.kind], rs = RING_SPACING[t.kind];
+    const mesh = new THREE.Mesh(tunnelGeometry(t.a, t.b), tunnelMaterial({
+      period: st.v * BEAT / 4, colA: st.colA, colB: st.colB, wall: st.wall, self: st.self ?? 0,
+      ringSp: rs.sp, ringOff: mod(S(rs.k), rs.sp),
+    }));
     mesh.frustumCulled = false; group.add(mesh);
     const len = t.b - t.a, cz = -(t.a + t.b) / 2, W = 260, TOP = 190;
     const tint = i === 3 ? 0x2a2a3a : 0x1b1b2a;
@@ -127,16 +136,62 @@ export function buildWorld(scene) {
     push('build', (5.4 + W / 2), (TOP + GROUND_Y) / 2, cz, W, TOP - GROUND_Y, len, tint);
     push('build', 0, (TOP + 5.5) / 2, cz, 10.8, TOP - 5.5, len, tint);
     push('build', 0, (GROUND_Y + DECK_Y - 0.05) / 2, cz, 10.8, DECK_Y - 0.05 - GROUND_Y, len, tint);
-    if (i > 0) ringAt(t.a - 0.2, st.ring, 0.7, 0.8, -0.3);
-    if (i < 3) ringAt(t.b + 0.2, st.ring, 0.7, 0.8, -0.3);
+    // facade dressing around the mouth: buttresses, lintel, warning lights
+    for (const end of [i > 0 ? t.a : null, i < 3 ? t.b : null]) {
+      if (end === null) continue;
+      const out = end === t.a ? -1 : 1; // direction pointing out of the tunnel (in s)
+      const zf = -(end + out * 1.2);
+      ringAt(end + out * 0.2, st.ring, 0.7, 0.8, -0.3);
+      for (const sx of [-1, 1]) {
+        push('prop', sx * 8.2, 8, zf, 3.2, 30, 3, 0x2a2f3c);
+        push('prop', sx * 13.5, 2, zf, 2.2, 18, 2.4, 0x2a2f3c, 0, 0, sx * 0.18);
+        push('glow', sx * 8.2, 16, zf - out * 1.7, 1.2, 1.2, 0.3, 0xff3b1f);
+        push('glow', sx * 6.3, 1.0, zf, 0.25, 9, 0.4, st.ring);
+      }
+      push('prop', 0, 9.2, zf, 20, 3.4, 3.4, 0x2a2f3c);
+      push('prop', 0, 13.5, zf, 26, 1.2, 2.4, 0x3a4250);
+      for (let q = -3; q <= 3; q++) push('glow', q * 2.2, 9.2, zf - out * 1.8, 1.3, 1.3, 0.2, q % 2 ? 0xffd040 : 0x15151c);
+    }
+    // services running the length of the tunnel: pipes, ducts, catwalks
+    if (i < 3) {
+      const seg = 100, n = Math.ceil(len / seg);
+      for (let q = 0; q < n; q++) {
+        const a = t.a + q * seg, b = Math.min(t.b, a + seg), l = b - a, z = -(a + b) / 2;
+        for (const sx of [-1, 1]) {
+          push('prop', sx * 4.78, 3.55, z, 0.3, 0.3, l, PIPE);
+          push('prop', sx * 4.82, 3.05, z, 0.18, 0.18, l, 0x7a4a2a);
+          push('prop', sx * 2.1, 5.02, z, 1.1, 0.32, l, RIB);            // ceiling duct
+          push('prop', sx * 4.45, -0.35, z, 1.1, 0.14, l, 0x333a47);     // catwalk
+          push('prop', sx * 3.95, 0.65, z, 0.06, 0.06, l, 0x8a7a2a);     // handrail
+        }
+      }
+    }
   });
-  // rings on the beat
+  // rings on the beat, each on a structural rib; plain ribs in between
   const ringsFor = (k0, k1, step, kind) => {
     const st = TUNNEL_STYLE[kind];
+    const rib = kind === 3 ? 0xd8cfbf : RIB;
     for (let k = k0; k < k1; k += step) {
       const down = Number.isInteger(k) && ((k % 4) + 4) % 4 === 0;
       const whole = Number.isInteger(k);
-      ringAt(S(k), down ? st.ringDown : st.ring, whole ? (down ? 0.34 : 0.22) : 0.1, whole ? 0.6 : 0.3);
+      const s = S(k);
+      ringAt(s, down ? st.ringDown : st.ring, whole ? (down ? 0.34 : 0.22) : 0.1, whole ? 0.6 : 0.3);
+      if (!whole) continue;
+      frameAt('prop', s, rib, 0.5, 1.5, 0.05);
+      const sm = (s + S(k + 1)) / 2;
+      frameAt('prop', sm, rib, 0.3, 0.6, 0.0);
+      if (kind === 3) continue;
+      for (const sx of [-1, 1]) { // handrail posts + junction boxes
+        push('prop', sx * 3.95, 0.15, -sm, 0.07, 1.0, 0.07, 0x8a7a2a);
+        push('prop', sx * 3.95, 0.15, -s, 0.07, 1.0, 0.07, 0x8a7a2a);
+        push('prop', sx * 4.8, 2.0, -sm, 0.3, 0.9, 0.7, 0x4a5262);
+        push('glow', sx * 4.62, 2.2, -sm, 0.05, 0.12, 0.12, ((k % 2) + 2) % 2 ? 0x7dff3a : 0xff3b1f);
+      }
+      if (mod(k, 4) === 2) { // service doors with exit lights
+        const sx = mod(k, 8) === 2 ? 1 : -1;
+        push('prop', sx * 4.9, 0.85, -sm - 2, 0.2, 2.3, 1.5, 0x55606f);
+        push('glow', sx * 4.85, 2.25, -sm - 2, 0.12, 0.3, 1.1, 0x7dff3a);
+      }
     }
   };
   ringsFor(-34, B.drop1, 1, 0);
@@ -144,45 +199,107 @@ export function buildWorld(scene) {
   ringsFor(B.tunnel3 + 0.5, B.drop3, 0.5, 2);
   ringsFor(B.finale + 1, B.loopB + 30, 1, 3);
 
+  // parapets along the whole line
+  for (let a = TRACK_A; a < TRACK_B; a += 100) {
+    for (const sx of [-1, 1]) {
+      push('prop', sx * 4.9, DECK_Y + 0.45, -(a + 50), 0.3, 0.9, 100, 0x3a3f4d);
+      push('prop', sx * 2.6, DECK_Y + 0.12, -(a + 50), 0.5, 0.24, 100, 0x2c303b); // cable trough
+    }
+  }
+
   // ---- city: buildings
   const tints = [0x1c1c2e, 0x232338, 0x191926, 0x2a2440, 0x1d2633];
   const billboards = [];
+  const tint = () => tints[(r() * tints.length) | 0];
+  const building = (x, s, w, d, top, kind) => {
+    const z = -(s + d / 2);
+    push('build', x, (top + GROUND_Y) / 2, z, w, top - GROUND_Y, d, tint());
+    let rw = w, rd = d, ry = top;
+    if (kind !== 'low') { // stepped crown
+      const tiers = r() < 0.65 ? (r() < 0.4 ? 2 : 1) : 0;
+      for (let q = 0; q < tiers; q++) {
+        const h = (kind === 'sky' ? 20 + r() * 50 : 8 + r() * 22);
+        rw *= 0.55 + r() * 0.25; rd *= 0.55 + r() * 0.25;
+        push('build', x + (r() - 0.5) * (w - rw) * 0.6, ry + h / 2, z + (r() - 0.5) * (d - rd) * 0.6, rw, h, rd, tint());
+        ry += h;
+      }
+      if (r() < 0.6) { // antenna with a warning light
+        const h = 10 + r() * (kind === 'sky' ? 60 : 28);
+        push('prop', x, ry + h / 2, z, 0.7, h, 0.7, 0x3a4050);
+        push('prop', x, ry + h * 0.35, z, 3.0, 0.3, 0.3, 0x3a4050);
+        push('glow', x, ry + h + 0.5, z, 1.3, 1.3, 1.3, 0xff3b1f);
+      }
+      if (r() < 0.35) { // side fin sign
+        const sgn = x > 0 ? -1 : 1;
+        push('glow', x + sgn * (w / 2 + 0.6), top - 8 - r() * 20, z, 0.5, 14 + r() * 14, 1.6, [0x22e6ff, 0xff2bd0, 0xffb020][(r() * 3) | 0]);
+      }
+    }
+    if (kind !== 'sky') { // rooftop clutter: AC units, tanks, vents
+      const n = 1 + ((r() * 4) | 0);
+      for (let q = 0; q < n; q++) {
+        const uw = 2 + r() * 4, uh = 1.2 + r() * 2.5, ud = 2 + r() * 4;
+        const ux = x + (r() - 0.5) * (rw - uw) * 0.9, uz = z + (r() - 0.5) * (rd - ud) * 0.9;
+        push('prop', ux, ry + uh / 2, uz, uw, uh, ud, r() < 0.5 ? 0x3d4352 : 0x4a4038);
+        if (r() < 0.3) push('glow', ux, ry + uh + 0.12, uz, uw * 0.6, 0.2, ud * 0.6, 0x22e6ff);
+      }
+      if (r() < 0.4) { // water tank on legs
+        const ux = x + (r() - 0.5) * rw * 0.5, uz = z + (r() - 0.5) * rd * 0.5;
+        push('prop', ux, ry + 1.2, uz, 0.4, 2.4, 0.4, 0x2c303b);
+        push('prop', ux, ry + 3.8, uz, 3.2, 3.0, 3.2, 0x5a4a3c);
+      }
+      // parapet lip
+      push('prop', x, ry + 0.3, z - rd / 2 + 0.2, rw, 0.6, 0.4, 0x2a2e3a);
+      push('prop', x, ry + 0.3, z + rd / 2 - 0.2, rw, 0.6, 0.4, 0x2a2e3a);
+    }
+    return ry;
+  };
   for (const c of CITIES) {
     for (const side of [-1, 1]) {
       let s = c.a + 6;
       while (s < c.b - 30) { // row hugging the track
         const w = 14 + r() * 14, d = Math.min(14 + r() * 18, c.b - 8 - s);
-        const low = r() < 0.62;
-        const top = low ? -30 + r() * 24 : 8 + r() * 60;
-        const x = side * ((low ? 9 : 14) + w / 2 + r() * 12);
-        push('build', x, (top + GROUND_Y) / 2, -(s + d / 2), w, top - GROUND_Y, d, tints[(r() * tints.length) | 0]);
+        const low = r() < 0.72;
+        const top = low ? -32 + r() * 26 : 6 + r() * 34;
+        const x = side * ((low ? 9 : 20) + w / 2 + r() * 14);
+        building(x, s, w, d, top, low ? 'low' : 'mid');
         if (top > 22 && r() < 0.5) billboards.push({ x: x - side * (w / 2 + 0.4), y: 8 + r() * (top - 16), s: s + d / 2, side, size: 12 });
         s += d + 3 + r() * 12;
       }
       s = c.a + 4;
       while (s < c.b - 50) { // mid row, taller
         const w = 25 + r() * 25, d = Math.min(25 + r() * 30, c.b - 6 - s);
-        const top = 30 + r() * 110;
-        const x = side * (50 + w / 2 + r() * 35);
-        push('build', x, (top + GROUND_Y) / 2, -(s + d / 2), w, top - GROUND_Y, d, tints[(r() * tints.length) | 0]);
+        const top = 15 + r() * r() * 130;
+        const x = side * (62 + w / 2 + r() * 40);
+        building(x, s, w, d, top, 'mid');
         if (r() < 0.45) billboards.push({ x: x - side * (w / 2 + 0.4), y: 20 + r() * (top - 30), s: s + d / 2, side, size: 22 });
-        s += d + 8 + r() * 25;
+        s += d + 12 + r() * 40;
       }
       s = c.a + 4;
       while (s < c.b - 90) { // skyline giants
         const w = 40 + r() * 40, d = Math.min(40 + r() * 40, c.b - 6 - s);
         const top = 90 + r() * 230;
-        push('build', side * (150 + w / 2 + r() * 190), (top + GROUND_Y) / 2, -(s + d / 2), w, top - GROUND_Y, d, tints[(r() * tints.length) | 0]);
+        building(side * (150 + w / 2 + r() * 190), s, w, d, top, 'sky');
         s += d + 30 + r() * 80;
       }
     }
+    // overhead wire
+    for (let a = c.a; a < c.b; a += 100) { const b = Math.min(c.b, a + 100); push('prop', 0, 4.85, -(a + b) / 2, 0.07, 0.07, b - a, 0x15151c); }
     // beat-locked gantries + trackside signs
     let n = 0;
     for (let k = c.k0 + c.step; k < c.k1 - 0.01; k += c.step, n++) {
       const s = S(k);
       const down = Number.isInteger(k) && k % 4 === 0;
-      for (const x of [-4.7, 4.7]) push('prop', x, 0.7, -s, 0.35, 9.4, 0.35, 0x39404f);
-      push('prop', 0, 5.4, -s, 10.4, 0.45, 0.45, down ? 0x8a6a1c : 0x39404f);
+      const gc = down ? 0x8a6a1c : 0x39404f;
+      for (const sx of [-1, 1]) {
+        push('prop', sx * 4.7, 0.7, -s, 0.35, 9.4, 0.35, 0x39404f);
+        push('prop', sx * 4.7, -3.4, -s, 0.8, 1.0, 0.8, 0x2c313d);                    // footing
+        push('prop', sx * 4.0, 4.6, -s, 1.9, 0.18, 0.18, 0x39404f, 0, 0, sx * 0.75);  // knee brace
+        push('prop', sx * 3.0, 4.75, -s + 0.1, 0.45, 0.8, 0.3, 0x20232c);             // signal head
+        push('glow', sx * 3.0, 4.75, -s + 0.27, 0.22, 0.22, 0.05, sx > 0 ? 0x7dff3a : 0xff3b1f);
+      }
+      push('prop', 0, 5.4, -s, 10.4, 0.45, 0.45, gc);
+      push('prop', 0, 5.95, -s, 10.4, 0.12, 0.12, gc);
+      for (let q = -4; q <= 4; q += 2) push('prop', q, 5.68, -s, 0.1, 0.45, 0.1, gc, 0, 0, 0.5);
       push('glow', 0, 5.08, -s, down ? 9.0 : 6.0, 0.16, 0.22, down ? 0xffd040 : (Math.floor(k / 4) % 2 ? 0xff2bd0 : 0x22e6ff));
       // sign between gantries, alternating sides
       const ks = k + c.step / 2;
@@ -190,9 +307,28 @@ export function buildWorld(scene) {
         const ss = S(ks), side = n % 2 ? 1 : -1;
         push('prop', side * 5.1, 0.4, -ss, 0.25, 8.8, 0.25, 0x2c313d);
         push('prop', side * 6.4, 4.7, -ss, 2.8, 0.2, 0.2, 0x2c313d);
+        push('prop', side * 6.0, 4.1, -ss, 1.6, 0.12, 0.12, 0x2c313d, 0, 0, -side * 0.7);
+        push('prop', side * 7.6, 3.2, -ss - 0.12, 5.5, 2.9, 0.16, 0x15151c, 0, -side * 0.35, 0);
         push('sign', side * 7.6, 3.2, -ss + 0.2, 5.2, 2.6, 1, 0, 0, -side * 0.35, 0, (r() * 32) | 0);
       }
-      if (n % 2 === 0) push('prop', 0, (GROUND_Y + DECK_Y) / 2 - 0.3, -s, 5, DECK_Y - GROUND_Y - 0.6, 3, 0x20222c); // viaduct pier
+      if (n % 2 === 0) { // viaduct pier with a flared head
+        push('prop', 0, (GROUND_Y + DECK_Y) / 2 - 1.3, -s, 5, DECK_Y - GROUND_Y - 2.6, 3, 0x20222c);
+        push('prop', 0, DECK_Y - 1.4, -s, 9, 2.4, 4, 0x282b36);
+      }
+      // a highway crossing overhead every four bars
+      const stepsPerBar = 4 / c.step;
+      if (n % (stepsPerBar * 4) === stepsPerBar * 2 && k < c.k1 - 8) {
+        const so = S(k + c.step / 2);
+        push('prop', 0, 11.5, -so, 420, 2.2, 13, 0x262a36);
+        push('prop', 0, 13.1, -so - 6.3, 420, 1.0, 0.4, 0x3a3f4d);
+        push('prop', 0, 13.1, -so + 6.3, 420, 1.0, 0.4, 0x3a3f4d);
+        for (const sx of [-1, 1]) {
+          for (const px of [22, 80, 150]) push('prop', sx * px, (GROUND_Y + 10.4) / 2, -so, 4.5, 10.4 - GROUND_Y, 6, 0x20222c);
+          push('glow', sx * 60, 10.3, -so, 100, 0.14, 0.5, 0xffb020);
+        }
+        push('glow', 0, 10.3, -so + 6.4, 18, 0.3, 0.2, 0xff2bd0);
+        for (let q = 0; q < 14; q++) push('glow', -200 + q * 31 + (q % 3) * 4, 13.0, -so + (q % 2 ? 3 : -3), 2.4, 0.5, 1.1, q % 2 ? 0xfff2c0 : 0xff3b1f); // traffic
+      }
     }
   }
   for (const b of billboards) push('sign', b.x, b.y, -b.s, b.size, b.size / 2, 1, 0, 0, -b.side * Math.PI / 2, 0, (r() * 32) | 0);
@@ -347,5 +483,5 @@ export function buildWorld(scene) {
   }
   function reset() { first = true; lastHalf = -1; flash = 0; for (const b of bolts) { b.age = 9; b.mesh.visible = false; } }
 
-  return { group, update, reset, speed: (beat) => speedAtBeat(beat) };
+  return { group, update, reset, strike, speed: (beat) => speedAtBeat(beat) };
 }

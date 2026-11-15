@@ -33,7 +33,7 @@ function uziGeometry() {
 }
 
 export function createGuns({ scene, camera, fx, audio, robots, onKill, stats }) {
-  const bodyMat = toon({ vertexColors: true, ink: true, glowAttr: true, beatGlow: 1.2 });
+  const bodyMat = toon({ vertexColors: true, ink: true, glowAttr: true, beatGlow: 1.2, minLit: 0.5 });
   const hullMat = toon({ hull: 0.0045 });
   const flashMat = new THREE.MeshBasicMaterial({ color: 0xffe066, fog: false, toneMapped: false, side: THREE.DoubleSide, depthWrite: false, transparent: true, blending: THREE.AdditiveBlending });
   const coreMat = new THREE.MeshBasicMaterial({ color: 0xffffff, fog: false, toneMapped: false, side: THREE.DoubleSide, depthWrite: false });

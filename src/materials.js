@@ -38,8 +38,13 @@ float inkEdge(vec2 uv, float dist){
   float e = 1.0 - smoothstep(0.8, 1.8, min(a.x, a.y));
   return e * (1.0 - smoothstep(90.0, 320.0, dist));
 }
+vec3 grade(vec3 c){
+  float l = dot(c, vec3(0.299, 0.587, 0.114));
+  c = mix(vec3(l), c, 0.68);            // pull saturation down
+  return c * 0.95 / (1.0 + 0.1 * l);    // and take the edge off the brightest neon
+}
 vec3 applyFog(vec3 c, float dist){
-  return mix(c, uFogColor, smoothstep(uFogNear, uFogFar, dist));
+  return grade(mix(c, uFogColor, smoothstep(uFogNear, uFogFar, dist)));
 }
 `;
 
@@ -63,6 +68,7 @@ export function toon(o = {}) {
   if (o.hull) defines.HULL = o.hull.toFixed(4);
   if (o.tintGlow) defines.TINT_GLOW = 1;
   if (o.unlit) defines.UNLIT = 1;
+  if (o.minLit) defines.MINLIT = o.minLit.toFixed(3);
   defines.BEATGLOW = (o.beatGlow ?? 0.35).toFixed(3);
   return new THREE.ShaderMaterial({
     defines,
@@ -122,6 +128,9 @@ export function toon(o = {}) {
             vec3 c = base * (band > 0.9 ? 1.0 : (band > 0.4 ? 0.93 : 0.8));
           #else
             vec3 c = toonLit(base, band);
+            #ifdef MINLIT
+              c = max(c, base * MINLIT * (0.55 + 0.45 * band));
+            #endif
           #endif
           c = mix(c, g * (1.0 + uBeat * BEATGLOW), vGlow);
           #ifdef INK
@@ -185,13 +194,13 @@ export function buildingMaterial() {
 }
 
 // ---- tunnel shell ---------------------------------------------------------------
-export function tunnelMaterial({ period, colA, colB, wall, self = 0 }) {
+export function tunnelMaterial({ period, colA, colB, wall, self = 0, ringSp = 16, ringOff = 0 }) {
   return new THREE.ShaderMaterial({
     side: THREE.DoubleSide,
     uniforms: {
       ...G,
       uPeriod: { value: period }, uColA: { value: hex(colA) }, uColB: { value: hex(colB) },
-      uWall: { value: hex(wall) }, uSelf: { value: self },
+      uWall: { value: hex(wall) }, uSelf: { value: self }, uRingSp: { value: ringSp }, uRingOff: { value: ringOff },
     },
     vertexShader: VERT_HEAD + /* glsl */ `
       void main(){
@@ -201,7 +210,7 @@ export function tunnelMaterial({ period, colA, colB, wall, self = 0 }) {
       }`,
     fragmentShader: FRAG_COMMON + /* glsl */ `
       varying vec3 vN; varying vec3 vView; varying vec3 vPos;
-      uniform float uPeriod; uniform vec3 uColA; uniform vec3 uColB; uniform vec3 uWall; uniform float uSelf;
+      uniform float uPeriod; uniform vec3 uColA; uniform vec3 uColB; uniform vec3 uWall; uniform float uSelf; uniform float uRingSp; uniform float uRingOff;
       void main(){
         float dist = length(vView);
         vec3 n = normalize(vN);
@@ -211,6 +220,15 @@ export function tunnelMaterial({ period, colA, colB, wall, self = 0 }) {
         vec3 base = uWall * (mod(floor(q), 2.0) < 0.5 ? 1.0 : 0.82);
         float band = toonBand(n);
         vec3 c = mix(toonLit(base, band), base, uSelf);
+        // the only light in here comes from the fittings: pools around rings, strips and ceiling lamps
+        float isWallP = step(0.9, abs(n.x));
+        float rd = abs(fract((s - uRingOff) / uRingSp + 0.5) - 0.5) * uRingSp;
+        vec3 pool = uColA * 0.42 * exp(-rd * 0.55);
+        pool += uColA * 0.3 * exp(-abs(vPos.y - 1.25) * 1.5) * isWallP;
+        pool += uColB * 0.12 * exp(-abs(vPos.y + 1.6) * 1.5) * isWallP * step(0.5, fract(q * 0.5));
+        pool += mix(uColA, vec3(1.0), 0.5) * 0.22 * exp(-abs(vPos.x) * 0.7) * step(n.y, -0.3) * step(fq, 0.55);
+        float pb = floor(clamp(dot(pool, vec3(0.4)), 0.0, 1.0) * 5.0 + 0.5) / 5.0; // stepped, comic falloff
+        c += base * normalize(pool + 1e-4) * pb * 3.2 * (1.0 + uBeat * 0.35) * (1.0 - uSelf);
         float near = 1.0 - smoothstep(60.0, 160.0, dist);
         // panel seams
         float seam = 1.0 - smoothstep(0.03, 0.07, min(fq, 1.0 - fq) * uPeriod);
@@ -285,7 +303,7 @@ export function groundMaterial() {
   });
 }
 
-// ---- sky dome -------------------------------------------------------------------
+// ---- sky: procedural night skybox (stars, moon, banded clouds, far skyline) ----------
 export function skyMaterial() {
   return new THREE.ShaderMaterial({
     side: THREE.BackSide, depthWrite: false,
@@ -295,21 +313,66 @@ export function skyMaterial() {
       void main(){ vDir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
     fragmentShader: /* glsl */ `
       varying vec3 vDir;
-      uniform vec3 uFogColor; uniform float uFlash; uniform float uStorm;
+      uniform vec3 uFogColor; uniform float uFlash; uniform float uStorm; uniform float uTime;
+      float h21(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+      float vnoise(vec2 p){
+        vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+        return mix(mix(h21(i), h21(i + vec2(1.0, 0.0)), f.x), mix(h21(i + vec2(0.0, 1.0)), h21(i + vec2(1.0, 1.0)), f.x), f.y);
+      }
+      float fbm(vec2 p){ return 0.55 * vnoise(p) + 0.3 * vnoise(p * 2.1 + 7.3) + 0.15 * vnoise(p * 4.3 + 1.7); }
       void main(){
         vec3 d = normalize(vDir);
         float h = clamp(d.y, 0.0, 1.0);
         float t = pow(1.0 - h, 5.0);
-        t = floor(t * 7.0 + 0.5) / 7.0;                 // banded, comic-style gradient
-        vec3 top = mix(vec3(0.02, 0.015, 0.07), vec3(0.015, 0.015, 0.035), uStorm);
-        vec3 hor = mix(vec3(0.36, 0.09, 0.4), vec3(0.16, 0.1, 0.34), uStorm);
+        t = floor(t * 7.0 + 0.5) / 7.0;                       // banded, comic-style gradient
+        vec3 top = mix(vec3(0.025, 0.02, 0.085), vec3(0.015, 0.016, 0.04), uStorm);
+        vec3 hor = mix(vec3(0.33, 0.1, 0.38), vec3(0.15, 0.1, 0.32), uStorm);
         vec3 c = mix(top, hor, t);
-        float m = dot(d, normalize(vec3(-0.3, 0.33, -0.9)));
-        float moon = step(0.9982, m);
-        float halo = step(0.993, m) * 0.07 + step(0.985, m) * 0.04;
-        c += (vec3(0.95, 0.9, 1.0) * moon + vec3(0.6, 0.5, 0.9) * halo) * (1.0 - uStorm * 0.85);
-        c = mix(c, uFogColor, smoothstep(0.1, 0.0, d.y));
-        c += uFlash * vec3(0.22, 0.26, 0.45) * (0.35 + t);
+        // stars
+        vec2 sp = d.xz / (d.y + 0.35) * 70.0;
+        vec2 sc = floor(sp);
+        float sr = h21(sc);
+        float star = step(0.93, sr) * step(length(fract(sp) - 0.5 - (vec2(h21(sc + 3.1), h21(sc + 9.7)) - 0.5) * 0.6), 0.05 + 0.09 * fract(sr * 31.0));
+        c += vec3(0.8, 0.85, 1.0) * star * (0.5 + 0.5 * fract(sr * 77.0)) * smoothstep(0.08, 0.3, d.y) * (1.0 - uStorm);
+        // moon with a couple of maria
+        vec3 md = normalize(vec3(-0.3, 0.33, -0.9));
+        float m = dot(d, md);
+        float moon = step(0.9978, m);
+        vec3 mr = normalize(cross(md, vec3(0.0, 1.0, 0.0))), mu = cross(mr, md);
+        vec2 mp = vec2(dot(d, mr), dot(d, mu)) / 0.066;
+        float mare = step(length(mp - vec2(0.25, 0.3)), 0.28) + step(length(mp - vec2(-0.35, -0.1)), 0.2) + step(length(mp - vec2(0.2, -0.45)), 0.14);
+        vec3 mcol = mix(vec3(0.93, 0.9, 1.0), vec3(0.7, 0.68, 0.86), min(mare, 1.0));
+        float halo = step(0.992, m) * 0.06 + step(0.982, m) * 0.035;
+        // clouds: two cel bands, thicker and lower in the storm
+        vec2 cp = d.xz / (d.y + 0.16);
+        float n = fbm(cp * 1.15 + vec2(uTime * 0.012, uTime * 0.004));
+        float th = mix(0.56, 0.4, uStorm);
+        float cover = step(th, n) * smoothstep(0.02, 0.12, d.y);
+        float thick = step(th + 0.1, n);
+        vec3 cl = mix(vec3(0.075, 0.06, 0.14), vec3(0.045, 0.045, 0.085), thick);
+        cl = mix(cl, hor * 0.75, t * 0.9);                    // city glow on the cloud base
+        cl += uFlash * vec3(0.3, 0.34, 0.55) * (1.0 - thick * 0.6);
+        c += (mcol * moon + vec3(0.6, 0.5, 0.9) * halo) * (1.0 - cover) * (1.0 - uStorm * 0.9);
+        c = mix(c, cl, cover);
+        // distant skyline silhouette with pin-prick lights
+        float az = atan(d.x, -d.z);
+        float bx = az * 46.0, bi = floor(bx);
+        float bh = 0.025 + 0.085 * pow(h21(vec2(bi, 4.0)), 2.2) + 0.03 * step(0.9, h21(vec2(bi, 9.0)));
+        float bx2 = az * 17.0 + 3.0, bi2 = floor(bx2);
+        float bh2 = 0.02 + 0.13 * pow(h21(vec2(bi2, 2.0)), 3.0);
+        vec3 haze = mix(uFogColor, hor, 0.35);
+        if (d.y < bh2) c = mix(haze, vec3(0.05, 0.035, 0.1), 0.35);
+        if (d.y < bh) {
+          c = mix(uFogColor, vec3(0.03, 0.025, 0.07), 0.55);
+          vec2 wc = vec2(floor(fract(bx) * 5.0), floor(d.y * 260.0));
+          float wl = step(0.82, h21(wc + bi * 13.0)) * step(0.15, fract(bx)) * step(fract(bx), 0.85);
+          c += vec3(0.75, 0.5, 0.28) * wl * 0.55;
+          c += vec3(0.9, 0.15, 0.1) * step(bh - 0.004, d.y) * step(0.8, h21(vec2(bi, 21.0))) * step(0.4, fract(bx)) * step(fract(bx), 0.6);
+        }
+        c = mix(c, uFogColor, smoothstep(0.035, 0.0, d.y));
+        c += uFlash * vec3(0.2, 0.24, 0.42) * (0.3 + t);
+        float l = dot(c, vec3(0.299, 0.587, 0.114));
+        c = mix(vec3(l), c, 0.72) * 0.96;
         gl_FragColor = vec4(c, 1.0);
       }`,
   });

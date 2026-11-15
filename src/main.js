@@ -251,4 +251,4 @@ function runBot(beat) {
 renderer.setAnimationLoop(frame);
 
 if (params.has('auto')) { $('overlay').classList.add('hidden'); toReady(); audio.ready.then(startRun); }
-window.__game = { scene, world, camera, stats, robots, guns, audio, get songT() { return songT; }, get state() { return state; }, set songT(v) { songT = v; t0 = audio.ctx.currentTime - v; } };
+window.__game = { look(y, p) { yaw = y; pitch = p; }, scene, world, camera, stats, robots, guns, audio, get songT() { return songT; }, get state() { return state; }, set songT(v) { songT = v; t0 = audio.ctx.currentTime - v; } };
