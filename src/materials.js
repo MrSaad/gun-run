@@ -151,6 +151,7 @@ export function toon(o = {}) {
   if (o.hull) defines.HULL = o.hull.toFixed(4);
   if (o.tintGlow) defines.TINT_GLOW = 1;
   if (o.tintBase) defines.TINT_BASE = 1;
+  if (o.rim) defines.RIM = 1;
   if (o.unlit) defines.UNLIT = 1;
   if (o.minLit) defines.MINLIT = o.minLit.toFixed(3);
   if (o.detail) defines.DETAIL = o.detail.toFixed(3);
@@ -159,7 +160,7 @@ export function toon(o = {}) {
   defines.BEATGLOW = (o.beatGlow ?? 0.35).toFixed(3);
   return new THREE.ShaderMaterial({
     defines,
-    uniforms: { ...G, uColor: { value: hex(o.color ?? 0xffffff) }, uDetail: { value: o.detail ? detailTextures()[o.detailTex ?? 'metal'] : null } },
+    uniforms: { ...G, uColor: { value: hex(o.color ?? 0xffffff) }, uDetail: { value: o.detail ? detailTextures()[o.detailTex ?? 'metal'] : null }, uRim: { value: hex(o.rim ?? 0xffffff) } },
     vertexColors: !!o.vertexColors,
     transparent: !!o.halo, depthWrite: !o.halo, blending: o.halo ? THREE.AdditiveBlending : THREE.NormalBlending,
     side: o.hull ? THREE.BackSide : (o.side ?? THREE.FrontSide),
@@ -212,7 +213,7 @@ export function toon(o = {}) {
       varying vec3 vN; varying vec3 vView; varying vec2 vUv;
       varying vec3 vCol; varying float vGlow; varying vec3 vTint;
       varying vec3 vLp; varying vec3 vLn; varying vec3 vW;
-      uniform sampler2D uDetail;
+      uniform sampler2D uDetail; uniform vec3 uRim;
       void main(){
         float dist = length(vView);
         #ifdef HALO
@@ -222,6 +223,9 @@ export function toon(o = {}) {
         #endif
         #ifdef HULL
           vec3 c = INKCOL;
+          #ifdef USE_INSTANCING_COLOR
+            c = vTint;
+          #endif
         #else
           vec3 base = vCol;
           vec3 g = vCol;
@@ -256,6 +260,10 @@ export function toon(o = {}) {
             }
           #endif
           c = mix(c, g * (1.0 + uBeat * BEATGLOW), vGlow);
+          #ifdef RIM
+            float fres = 1.0 - max(dot(normalize(vN), normalize(cameraPosition - vW)), 0.0);
+            c = mix(c, uRim * (1.0 + uBeat * 0.5), step(0.62, fres) * 0.85);
+          #endif
           #ifdef INK
             c = mix(c, INKCOL, inkEdge(vUv, dist) * 0.9);
           #endif

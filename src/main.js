@@ -43,19 +43,25 @@ const LOOP_T = 4 * BEAT;
 let state = 'menu'; // menu | ready | playing
 let idleT = 0, songT = -LOOP_T, t0 = 0, results = null;
 
-const guns = createGuns({ scene, camera, fx, audio, robots, onKill, stats });
+const guns = createGuns({ scene, camera, fx, audio, robots, onHit, stats });
 
-function onKill(rb) {
+function onHit(rb, toward) {
+  if (!robots.damage(rb)) { // armour holds: spark, clank, a few points
+    fx.spark(rb.pos, toward);
+    audio.sfx('clank', 0.32, 0.85 + Math.random() * 0.3);
+    stats.score += 10 * mult();
+    return;
+  }
   const beat = timeBeat(songT);
   const grid = guns.uzi ? 0.5 : 1;
   const errSec = Math.abs(beat / grid - Math.round(beat / grid)) * grid * BEAT;
   const onBeat = errSec < (guns.uzi ? 0.05 : 0.09);
-  robots.kill(rb);
   stats.kills++; stats.combo++; stats.maxCombo = Math.max(stats.maxCombo, stats.combo);
-  stats.score += Math.round(100 * mult() * (onBeat ? 1.5 : 1));
+  stats.score += Math.round(rb.pts * mult() * (onBeat ? 1.5 : 1));
   if (onBeat) { stats.onBeat++; hud.onBeat(); fx.word(rb.pos); }
-  fx.explode(rb.pos, onBeat);
-  audio.sfx('boom', onBeat ? 0.6 : 0.45, 0.85 + Math.random() * 0.4);
+  fx.explode(rb.pos, onBeat, rb.boom);
+  audio.sfx('boom', (onBeat ? 0.6 : 0.45) * Math.min(1.4, rb.boom), (0.85 + Math.random() * 0.4) / Math.sqrt(rb.boom));
+  if (rb.type === 'brute') guns.pulse(0.8, 90);
 }
 function onReach(rb) {
   stats.hits++; stats.combo = 0;

@@ -64,8 +64,8 @@ export function createFx(scene, camera) {
   camera.add(hitQuad);
   let hitA = 0;
 
-  function explode(pos, big = false) {
-    const k = big ? 1.45 : 1;
+  function explode(pos, big = false, size = 1) {
+    const k = (big ? 1.45 : 1) * size;
     P.fire.push({ p: pos.clone(), v: new THREE.Vector3(), life: 0.3, age: 0, s: 1.5 * k, c: FIRE_COLS[0] });
     const n = big ? 8 : 5;
     for (let i = 0; i < n; i++) {
@@ -195,5 +195,18 @@ export function createFx(scene, camera) {
     hitA = 0;
   }
 
-  return { explode, word, tracer, playerHit, light, update, reset };
+  // non-lethal hit on armour: a white impact burst and a few sparks
+  function spark(pos, toward) {
+    const st = stars[starI++ % stars.length];
+    st.m.position.copy(pos).addScaledVector(toward, 0.6); st.age = 0; st.size = 1.1; st.m.rotation.z = Math.random() * 6.28;
+    st.m.material.color.setHex(0xffffff);
+    for (let i = 0; i < 5; i++) {
+      const v = new THREE.Vector3(rnd(), rnd() + 0.4, rnd()).normalize().multiplyScalar(5 + Math.random() * 6).addScaledVector(toward, 4);
+      P.debris.push({ p: pos.clone().addScaledVector(toward, 0.5), v, life: 0.35 + Math.random() * 0.25, age: 0, s: 0.05 + Math.random() * 0.06, c: FIRE_COLS[i % 2], rot: new THREE.Euler(rnd(3), rnd(3), rnd(3)), spin: rnd(14) });
+    }
+    while (P.debris.length > DEBRIS_MAX) P.debris.shift();
+    light(pos, 0.9, 0.8, 0.6, 7, 0.08);
+  }
+
+  return { explode, spark, word, tracer, playerHit, light, update, reset };
 }

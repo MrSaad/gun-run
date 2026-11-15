@@ -32,12 +32,25 @@ function uziGeometry() {
   ]);
 }
 
-export function createGuns({ scene, camera, fx, audio, robots, onKill, stats }) {
+export function createGuns({ scene, camera, fx, audio, robots, onHit, stats }) {
   const bodyMat = toon({ vertexColors: true, ink: true, glowAttr: true, beatGlow: 1.2, minLit: 0.5, detail: 7.0 });
   const hullMat = toon({ hull: 0.0045 });
   const flashMat = new THREE.MeshBasicMaterial({ color: 0xffe066, fog: false, toneMapped: false, side: THREE.DoubleSide, depthWrite: false, transparent: true, blending: THREE.AdditiveBlending });
   const coreMat = new THREE.MeshBasicMaterial({ color: 0xffffff, fog: false, toneMapped: false, side: THREE.DoubleSide, depthWrite: false });
-  const laserMat = new THREE.MeshBasicMaterial({ color: 0xff2a2a, fog: false, toneMapped: false, transparent: true, opacity: 0.28, depthWrite: false });
+  const laserGeo = new THREE.BoxGeometry(1, 1, 1); laserGeo.translate(0, 0, -0.5); // unit beam along -Z, scaled per frame
+
+  // lock-on reticle: four comic corner brackets, drawn on top of everything
+  const reticleGeo = (() => {
+    const pos = [], L = 0.42, W = 0.09;
+    const quad = (x0, y0, x1, y1) => pos.push(x0, y0, 0, x1, y0, 0, x1, y1, 0, x0, y0, 0, x1, y1, 0, x0, y1, 0);
+    for (const sx of [-1, 1]) for (const sy of [-1, 1]) {
+      const x = sx, y = sy;
+      quad(Math.min(x, x - sx * L), Math.min(y, y - sy * W), Math.max(x, x - sx * L), Math.max(y, y - sy * W));
+      quad(Math.min(x, x - sx * W), Math.min(y, y - sy * L), Math.max(x, x - sx * W), Math.max(y, y - sy * L));
+    }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); return g;
+  })();
+  const dotGeo = new THREE.CircleGeometry(1, 16);
   const pg = pistolGeometry(), ug = uziGeometry();
   const star = starGeometry(8, 1, 0.38, 0.4, 5), starCore = starGeometry(8, 0.5, 0.2, 0.3, 9);
   const spike = new THREE.PlaneGeometry(0.07, 0.5); spike.rotateX(-Math.PI / 2); spike.translate(0, 0, -0.25);
@@ -60,10 +73,18 @@ export function createGuns({ scene, camera, fx, audio, robots, onKill, stats }) 
     const sp1 = new THREE.Mesh(spike, flashMat), sp2 = new THREE.Mesh(spike, flashMat); sp2.rotation.z = Math.PI / 2;
     flash.add(s1, s2, sp1, sp2);
     const muzzle = new THREE.Object3D();
-    const laser = new THREE.Mesh(new THREE.BoxGeometry(0.004, 0.004, 45), laserMat); laser.position.set(0, 0.01, -23);
+    const laserMat = new THREE.MeshBasicMaterial({ color: 0xff2a2a, fog: false, toneMapped: false, transparent: true, opacity: 0.28, depthWrite: false });
+    const laser = new THREE.Mesh(laserGeo, laserMat); laser.position.set(0, 0.01, -0.3);
+    const reticle = new THREE.Mesh(reticleGeo, new THREE.MeshBasicMaterial({ color: 0xff5a2a, fog: false, toneMapped: false, transparent: true, depthTest: false, depthWrite: false, side: THREE.DoubleSide }));
+    reticle.renderOrder = 40; reticle.visible = false; scene.add(reticle);
+    const dot = new THREE.Group();
+    const dotOuter = new THREE.Mesh(dotGeo, new THREE.MeshBasicMaterial({ color: 0xff3a1a, fog: false, toneMapped: false, transparent: true, opacity: 0.7, depthTest: false, depthWrite: false, blending: THREE.AdditiveBlending }));
+    const dotCore = new THREE.Mesh(dotGeo, new THREE.MeshBasicMaterial({ color: 0xfff0e0, fog: false, toneMapped: false, depthTest: false, depthWrite: false }));
+    dotCore.scale.setScalar(0.4); dotCore.renderOrder = 42; dotOuter.renderOrder = 41;
+    dot.add(dotOuter, dotCore); dot.visible = false; scene.add(dot);
     body.add(pistol, uziM, flash, muzzle, laser);
     desktopHolders[i].add(root);
-    const g = { i, root, body, pistol, uziM, flash, muzzle, laser, kick: 0, flashT: 0, held: false, last: -1, lastShot: -1, aim: camera, src: null };
+    const g = { i, root, body, pistol, uziM, flash, muzzle, laser, laserMat, reticle, dot, target: null, lockT: 0, kick: 0, flashT: 0, held: false, last: -1, lastShot: -1, aim: camera, src: null };
     setMuzzle(g);
     return g;
   });
@@ -90,7 +111,7 @@ export function createGuns({ scene, camera, fx, audio, robots, onKill, stats }) 
     audio.sfx(uzi ? 'uzi' : 'pistol', uzi ? 0.22 : 0.42, 0.92 + Math.random() * 0.16);
     const act = g.src && g.src.gamepad && g.src.gamepad.hapticActuators && g.src.gamepad.hapticActuators[0];
     if (act && act.pulse) act.pulse(uzi ? 0.5 : 0.9, uzi ? 30 : 60);
-    if (rb) onKill(rb);
+    if (rb) onHit(rb, dir.clone().negate());
   }
 
   function press(i, enabled, beat, now) {
@@ -101,7 +122,66 @@ export function createGuns({ scene, camera, fx, audio, robots, onKill, stats }) 
   }
   function release(i) { guns[i].held = false; }
 
+  const camQ = new THREE.Quaternion(), camP = new THREE.Vector3(), hitP = new THREE.Vector3();
+  function haptic(g, s, ms) {
+    const act = g.src && g.src.gamepad && g.src.gamepad.hapticActuators && g.src.gamepad.hapticActuators[0];
+    if (act && act.pulse) act.pulse(s, ms);
+  }
+  // What each gun is pointing at, every frame: drives the outline glow, reticle, laser length and dot.
+  function updateTargets(dt, enabled) {
+    camera.getWorldQuaternion(camQ); camera.getWorldPosition(camP);
+    guns.forEach((g, gi) => {
+      let rb = null;
+      if (enabled) {
+        g.aim.getWorldPosition(origin); g.aim.getWorldQuaternion(q);
+        dir.set(0, 0, -1).applyQuaternion(q).normalize();
+        rb = robots.hitTest(origin, dir);
+      }
+      if (g.target && g.target.state !== 1) g.target = null;
+      if (rb !== g.target) {
+        if (g.target) g.target.locked = Math.max(0, g.target.locked - 1);
+        if (rb) {
+          rb.locked = (rb.locked || 0) + 1; g.lockT = 0;
+          const other = guns[1 - gi].target === rb && xr; // don't double-tick in desktop mode
+          if (!other) audio.sfx('lock', 0.22, rb.type === 'brute' ? 0.8 : 1);
+          haptic(g, 0.25, 18);
+        }
+        g.target = rb;
+      }
+      g.lockT += dt;
+      const showRet = !!rb && (xr || gi === 0); // desktop: both guns share the camera ray, show one reticle
+      g.reticle.visible = showRet;
+      if (rb) {
+        const along = hitP.subVectors(rb.pos, origin).dot(dir);
+        if (showRet) {
+          const pop = Math.max(0, 1 - g.lockT / 0.12);                     // snaps in from wide
+          const R = rb.rad * rb.scale * 1.15 * (1 + pop * 0.9);
+          g.reticle.position.copy(rb.pos);
+          g.reticle.quaternion.copy(camQ);
+          g.reticle.rotateZ((gi ? -1 : 1) * (0.785 * pop + g.lockT * 0.6));
+          g.reticle.scale.setScalar(R);
+          g.reticle.material.opacity = 0.75 + 0.25 * Math.sin(g.lockT * 30);
+          g.reticle.material.color.setHex(rb.type === 'brute' ? 0xffa040 : 0xff5a2a);
+        }
+        // laser ends on the enemy's surface, brighter and fatter
+        const len = Math.max(0.3, along - rb.rad * rb.scale * 0.7);
+        g.laser.scale.set(0.007, 0.007, len);
+        g.laserMat.opacity = 0.75;
+        hitP.copy(origin).addScaledVector(dir, len + 0.05);
+        g.dot.visible = xr;
+        g.dot.position.copy(hitP);
+        g.dot.quaternion.copy(camQ);
+        g.dot.scale.setScalar(0.06 + 0.02 * Math.sin(g.lockT * 25));
+      } else {
+        g.laser.scale.set(0.004, 0.004, 45);
+        g.laserMat.opacity = 0.28;
+        g.dot.visible = false;
+      }
+    });
+  }
+
   function update(dt, beat, enabled) {
+    updateTargets(dt, enabled);
     for (const g of guns) {
       if (uzi && g.held && enabled) {
         const idx = Math.floor(beat * 4 + g.i * 0.5); // 16th-note grid, hands offset by a 32nd
