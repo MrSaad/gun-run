@@ -40,8 +40,11 @@ const cars = createCars(scene, audio);
 const stats = { score: 0, combo: 0, maxCombo: 0, kills: 0, shots: 0, hits: 0, onBeat: 0 };
 const mult = () => Math.min(8, 1 + Math.floor(stats.combo / 8));
 const LOOP_T = 4 * BEAT;
+// The run starts partway into the track, on the bar line at beat 32 (0:17.3). Game time stays song time,
+// so every tunnel, spawn and lightning cue keeps its original sync.
+const START_T = beatTime(32);
 let state = 'menu'; // menu | ready | playing
-let idleT = 0, songT = -LOOP_T, t0 = 0, results = null;
+let idleT = 0, songT = START_T - LOOP_T, t0 = 0, results = null;
 
 const guns = createGuns({ scene, camera, fx, audio, robots, onHit, stats });
 
@@ -91,8 +94,8 @@ function startRun() {
     robots.reset(timeBeat(from));
     guns.setUzi(timeBeat(from) >= B.uzi, true);
   } else {
-    t0 = now + 0.05 - songT; // songT is negative: the song starts when the idle loop reaches 0
-    audio.playSong(t0, 0);
+    t0 = now + 0.05 - songT; // the idle loop is just short of START_T; the song picks up exactly there
+    audio.playSong(t0 + START_T, START_T);
   }
   state = 'playing';
 }
@@ -191,7 +194,7 @@ function frame() {
     }
   } else {
     idleT += dt;
-    songT = -LOOP_T + (idleT % LOOP_T);
+    songT = START_T - LOOP_T + (idleT % LOOP_T);
   }
   const realBeat = timeBeat(songT);
   // after the song, the bright tunnel loops forever behind the score card
@@ -232,7 +235,7 @@ function frame() {
   if (state === 'ready') kind = audio.loaded ? 'ready' : 'loading';
   else if (playing) {
     if (results) kind = 'results';
-    else if (realBeat < 40) kind = 'intro';
+    else if (realBeat < B.robots - 2) kind = 'intro';
     else if (realBeat >= B.uzi && realBeat < B.drop3 - 2) kind = 'uzi';
   }
   hud.showInfo(kind, results);

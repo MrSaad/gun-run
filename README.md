@@ -25,7 +25,7 @@ tunnel rings, gantries and signs stay locked to the music at any train speed.
 
 | Time | Beat | What happens |
 |---|---|---|
-| 0:00 | 0 | Tunnel 1, train only |
+| 0:17 | 32 | Run starts here (intro trimmed): tunnel 1, train only |
 | 0:25 | 48 | Drones start, 57 per minute |
 | 0:59 | 112 | Drop: out into the city |
 | 1:33 | 176 | Tunnel 2 |
