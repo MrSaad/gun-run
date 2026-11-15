@@ -43,7 +43,7 @@ export function createCars(scene, audio) {
   for (const L of LANES) {
     const n = 7;
     for (let i = 0; i < n; i++) {
-      cars.push({ ...L, s0: (i + r() * 0.6) * (SPAN / n), ph: r() * 6.28, paint: PAINT[(r() * PAINT.length) | 0], prev: null });
+      cars.push({ ...L, s0: (i + r() * 0.6) * (SPAN / n), ph: r() * 6.28, paint: PAINT[(r() * PAINT.length) | 0] });
     }
   }
   const geo = carGeometry();
@@ -61,9 +61,9 @@ export function createCars(scene, audio) {
     let n = 0;
     for (const c of cars) {
       const rel = mod(c.s0 + c.v * t - dist + BEHIND, SPAN) - BEHIND; // metres ahead of the player
-      if (inTunnel(dist + rel)) { c.prev = null; continue; }
+      if (inTunnel(dist + rel)) { continue; }
       const fade = Math.min(1, (rel + BEHIND) / 40, (SPAN - BEHIND - rel) / 100);
-      if (fade <= 0) { c.prev = null; continue; }
+      if (fade <= 0) { continue; }
       const overhead = Math.abs(c.x) < 6;
       const weave = Math.sin(t * 0.55 + c.ph);
       d.position.set(c.x + weave * (overhead ? 0.8 : 1.4), c.y + Math.sin(t * 1.4 + c.ph * 2) * 0.35, -rel);
@@ -73,11 +73,6 @@ export function createCars(scene, audio) {
       mesh.setMatrixAt(n, d.matrix);
       mesh.setColorAt(n, col(c.paint));
       n++;
-      // whoosh as a car screams past close overhead
-      if (playing && c.prev !== null && Math.sign(c.prev) !== Math.sign(rel) && Math.abs(c.prev - rel) < 30 && Math.abs(c.x) < 6 && c.y < 22) {
-        audio.sfx('whoosh', 0.32, 0.85 + Math.random() * 0.3);
-      }
-      c.prev = rel;
     }
     mesh.count = hull.count = n;
     mesh.instanceMatrix.needsUpdate = true;

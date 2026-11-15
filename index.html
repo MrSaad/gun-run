@@ -47,11 +47,6 @@
   button:not(:disabled):active { transform: skewX(-6deg) translate(3px, 3px); box-shadow: 3px 3px 0 var(--pink); }
   .note { margin-top: 20px; font: 400 13px/1.5 Arial, sans-serif; color: #7f8aa3; }
   #status { min-height: 18px; margin-top: 10px; font: 700 14px Arial, sans-serif; color: #ff6a5a; }
-  #crosshair {
-    display: none; position: fixed; left: 50%; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; z-index: 5; pointer-events: none;
-    border: 2px solid var(--cyan); border-radius: 50%; box-sizing: border-box;
-  }
-  #crosshair::after { content: ""; position: absolute; left: 50%; top: 50%; width: 2px; height: 2px; margin: -1px; background: #fff; }
 </style>
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
 </head>
@@ -67,13 +62,11 @@
     </ol>
     <div class="buttons">
       <button id="btn-vr" disabled>ENTER VR</button>
-      <button id="btn-desktop" class="alt">PLAY ON DESKTOP</button>
     </div>
     <div id="status">Loading track…</div>
-    <p class="note">Stand up with a little room around you. One song, about three and a half minutes.<br>Contains fast motion and flashing lights. Desktop: mouse to aim, click to shoot.</p>
+    <p class="note">Stand up with a little room around you. One song, about three and a half minutes.<br>Contains fast motion and flashing lights.</p>
   </div>
 </div>
-<div id="crosshair"></div>
 <script type="module" src="./src/main.js"></script>
 </body>
 </html>
