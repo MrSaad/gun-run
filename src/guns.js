@@ -142,8 +142,6 @@ export function createGuns({ scene, camera, fx, audio, robots, onHit, stats }) {
         if (g.target) g.target.locked = Math.max(0, g.target.locked - 1);
         if (rb) {
           rb.locked = (rb.locked || 0) + 1; g.lockT = 0;
-          const other = guns[1 - gi].target === rb && xr; // don't double-tick in desktop mode
-          if (!other) audio.sfx('lock', 0.22, rb.type === 'brute' ? 0.8 : 1);
           haptic(g, 0.25, 18);
         }
         g.target = rb;
