@@ -11,7 +11,7 @@ It is a static site: no build step, three.js is vendored in `vendor/`.
 - **Quest:** WebXR needs HTTPS. Serve this folder from GitHub Pages
   (Settings → Pages → deploy from branch, root folder), open the URL in the
   Quest browser and press **ENTER VR**.
-- **Desktop:** run a local server and open it in a browser. Mouse to aim, click to shoot.
+- **Local testing:** run a local server; the page still needs a WebXR headset to play.
 
 ```bash
 python3 -m http.server 8000
@@ -47,5 +47,6 @@ tunnel rings, gantries and signs stay locked to the music at any train speed.
 
 ## Dev shortcuts
 
-Add to the URL: `?auto` skips the start page, `?t=110` starts the song at
-110 seconds, `?bot` auto-aims and fires (desktop only).
+The game is VR-only. For testing without a headset, add to the URL:
+`?auto` skips the start page and plays with mouse controls, `?t=110` starts
+the song at 110 seconds, `?bot` auto-aims and fires.
