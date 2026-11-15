@@ -7,6 +7,7 @@ import { createFx } from './fx.js';
 import { createGuns } from './guns.js';
 import { createAudio } from './audio.js';
 import { createHud } from './hud.js';
+import { createCars } from './cars.js';
 
 const params = new URLSearchParams(location.search);
 const $ = (id) => document.getElementById(id);
@@ -33,6 +34,7 @@ const robots = createRobots(scene);
 const fx = createFx(scene, camera);
 const audio = createAudio('assets/black-magic.mp3');
 const hud = createHud(scene);
+const cars = createCars(scene, audio);
 
 // ---------------------------------------------------------------- game state
 const stats = { score: 0, combo: 0, maxCombo: 0, kills: 0, shots: 0, hits: 0, onBeat: 0 };
@@ -198,6 +200,7 @@ function frame() {
   if (camPos.lengthSq() === 0) camPos.set(0, 1.7, 0);
 
   world.update(dt, t, beat, distAt(t), camPos, playing);
+  cars.update(dt, t, distAt(t), playing);
 
   if (playing) {
     const uzi = realBeat >= B.uzi;
@@ -251,4 +254,4 @@ function runBot(beat) {
 renderer.setAnimationLoop(frame);
 
 if (params.has('auto')) { $('overlay').classList.add('hidden'); toReady(); audio.ready.then(startRun); }
-window.__game = { fx, look(y, p) { yaw = y; pitch = p; }, scene, world, camera, stats, robots, guns, audio, get songT() { return songT; }, get state() { return state; }, set songT(v) { songT = v; t0 = audio.ctx.currentTime - v; } };
+window.__game = { cars, fx, look(y, p) { yaw = y; pitch = p; }, scene, world, camera, stats, robots, guns, audio, get songT() { return songT; }, get state() { return state; }, set songT(v) { songT = v; t0 = audio.ctx.currentTime - v; } };

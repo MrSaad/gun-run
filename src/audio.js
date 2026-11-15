@@ -30,6 +30,7 @@ export function createAudio(url) {
     uzi: synth(0.11, (t, osc) => noise() * Math.exp(-t * 55) * 0.7 + osc(230 * Math.exp(-t * 30) + 70) * Math.exp(-t * 40) * 0.7),
     boom: synth(0.8, (t, osc, lpf) => lpf(noise(), 0.03 + 0.5 * Math.exp(-t * 9)) * Math.exp(-t * 5.5) * 1.6 + osc(75 * Math.exp(-t * 5) + 28) * Math.exp(-t * 7) * 0.9),
     hit: synth(0.35, (t, osc) => Math.sign(osc(95)) * Math.exp(-t * 9) * 0.5 + noise() * Math.exp(-t * 20) * 0.5),
+    whoosh: synth(1.1, (t, osc, lpf) => lpf(noise(), 0.05 + 0.25 * Math.sin(Math.PI * t / 1.1)) * Math.pow(Math.sin(Math.PI * t / 1.1), 3) * 2.2),
     power: synth(0.6, (t, osc) => osc(220 + t * 900) * Math.min(1, t * 20) * Math.exp(-t * 4) * 0.5),
   };
 

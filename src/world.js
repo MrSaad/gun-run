@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 import { B, BEAT, S, V1, TUNNELS, CITIES, TRACK_A, TRACK_B, rng, speedAtBeat } from './timeline.js';
-import { G, toon, buildingMaterial, tunnelMaterial, deckMaterial, groundMaterial, skyMaterial, signMaterial, rainMaterial, trafficMaterial, col } from './materials.js';
+import { G, toon, buildingMaterial, tunnelMaterial, deckMaterial, skyMaterial, signMaterial, rainMaterial, trafficMaterial, col } from './materials.js';
 
 const DECK_Y = -4.0;
-const GROUND_Y = -60;
+const GROUND_Y = -420; // buildings and piers plunge into the haze; there is no ground
 // Tunnel cross-section (inside), left-bottom -> over the top -> right-bottom.
 const PROFILE = [[-5, -4.3], [-5, 3.0], [-3.2, 5.2], [3.2, 5.2], [5, 3.0], [5, -4.3]];
 
@@ -93,9 +93,6 @@ export function buildWorld(scene) {
   deckGeo.rotateX(-Math.PI / 2); deckGeo.translate(0, DECK_Y, midZ);
   const deck = new THREE.Mesh(deckGeo, deckMaterial()); deck.frustumCulled = false; group.add(deck);
 
-  const groundGeo = new THREE.PlaneGeometry(2400, L, 8, Math.ceil(L / 200));
-  groundGeo.rotateX(-Math.PI / 2); groundGeo.translate(0, GROUND_Y, midZ);
-  const ground = new THREE.Mesh(groundGeo, groundMaterial()); ground.frustumCulled = false; group.add(ground);
 
   // ---- instance lists
   const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), P = new THREE.Vector3(), Sc = new THREE.Vector3();
@@ -461,7 +458,7 @@ export function buildWorld(scene) {
       return pts;
     };
     const sc = d / 250;
-    const main = path(bx, 420, bz, -30 + lr() * 60, 12, (big ? 3.4 : 1.6) * sc + 0.6, 34 * sc);
+    const main = path(bx, 420, bz, 12 + lr() * 45, 12, (big ? 3.4 : 1.6) * sc + 0.6, 34 * sc);
     const f = main[4 + ((lr() * 4) | 0)];
     path(f[0], f[1], f[2], f[1] - 120 - lr() * 80, 6, (big ? 1.6 : 0.8) * sc + 0.3, 46 * sc);
     if (big) { const f2 = main[3]; path(f2[0], f2[1], f2[2], f2[1] - 160, 6, 1.4 * sc + 0.3, 50 * sc); }

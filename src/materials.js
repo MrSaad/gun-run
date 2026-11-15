@@ -122,8 +122,12 @@ vec3 grade(vec3 c){
   c = mix(vec3(l), c, 0.78);            // pull saturation down
   return c * 0.95 / (1.0 + 0.1 * l);    // and take the edge off the brightest neon
 }
-vec3 applyFog(vec3 c, float dist){
-  return grade(mix(c, uFogColor, smoothstep(uFogNear, uFogFar, dist)));
+const vec3 DEEP_TINT = vec3(0.05, 0.022, 0.0);   // sodium street-glow rising out of the haze
+vec3 applyFog(vec3 c, float dist, float wy){
+  float fd = smoothstep(uFogNear, uFogFar, dist);
+  float hf = smoothstep(-8.0, -75.0, wy);
+  vec3 fc = uFogColor + DEEP_TINT * hf;
+  return grade(mix(c, fc, 1.0 - (1.0 - fd) * (1.0 - hf)));
 }
 `;
 
@@ -146,6 +150,7 @@ export function toon(o = {}) {
   if (o.allGlow) defines.ALLGLOW = 1;
   if (o.hull) defines.HULL = o.hull.toFixed(4);
   if (o.tintGlow) defines.TINT_GLOW = 1;
+  if (o.tintBase) defines.TINT_BASE = 1;
   if (o.unlit) defines.UNLIT = 1;
   if (o.minLit) defines.MINLIT = o.minLit.toFixed(3);
   if (o.detail) defines.DETAIL = o.detail.toFixed(3);
@@ -220,8 +225,10 @@ export function toon(o = {}) {
         #else
           vec3 base = vCol;
           vec3 g = vCol;
-          #ifdef TINT_GLOW
+          #if defined(TINT_GLOW)
             g *= vTint;
+          #elif defined(TINT_BASE)
+            base *= vTint;
           #else
             base *= vTint; g *= vTint;
           #endif
@@ -253,7 +260,7 @@ export function toon(o = {}) {
             c = mix(c, INKCOL, inkEdge(vUv, dist) * 0.9);
           #endif
         #endif
-        gl_FragColor = vec4(applyFog(c, dist), 1.0);
+        gl_FragColor = vec4(applyFog(c, dist, vW.y), 1.0);
       }`,
   });
 }
@@ -271,12 +278,14 @@ export function buildingMaterial() {
         vTop = sc.y * 0.5;
         vSeed = fract(sin(dot(instanceMatrix[3].xz, vec2(12.9898, 78.233))) * 43758.5453);
         vTint = instanceColor;
-        vec4 mv = viewMatrix * (m * vec4(position, 1.0));
+        vec4 wp = m * vec4(position, 1.0);
+        vW = wp.xyz;
+        vec4 mv = viewMatrix * wp;
         vView = mv.xyz; vN = mat3(m) * normal; vUv = uv;
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: FRAG_COMMON + /* glsl */ `
-      varying vec3 vN; varying vec3 vView; varying vec2 vUv;
+      varying vec3 vN; varying vec3 vView; varying vec2 vUv; varying vec3 vW;
       varying vec3 vLocal; varying float vSeed; varying float vTop; varying vec3 vTint;
       uniform sampler2D uDetail;
       vec3 pal(float h){
@@ -311,7 +320,7 @@ export function buildingMaterial() {
         float trim = step(vTop - 1.6, vLocal.y) * step(0.8, fract(seed * 7.3)) * wall;
         c = mix(c, pal(fract(seed * 5.1)) * (1.0 + uBeat * 0.4), trim);
         c = mix(c, INKCOL, inkEdge(vUv, dist) * 0.9);
-        gl_FragColor = vec4(applyFog(c, dist), 1.0);
+        gl_FragColor = vec4(applyFog(c, dist, vW.y), 1.0);
       }`,
   });
 }
@@ -375,7 +384,7 @@ export function tunnelMaterial({ period, colA, colB, wall, self = 0, ringSp = 16
         // ceiling light dashes
         float ceilL = step(n.y, -0.9) * step(abs(vPos.x), 0.35) * step(fq, 0.55);
         c = mix(c, mix(uColA, vec3(1.0), 0.6) * glowK, ceilL);
-        gl_FragColor = vec4(applyFog(c, dist), 1.0);
+        gl_FragColor = vec4(applyFog(c, dist, vW.y), 1.0);
       }`,
   });
 }
@@ -408,31 +417,7 @@ export function deckMaterial() {
         c = mix(c, c * 0.45 + uFogColor * 1.5 + vec3(0.05, 0.08, 0.16) * uBeat, puddle);
         float edge = step(4.3, ax) * step(ax, 4.6);
         c = mix(c, vec3(1.0, 0.75, 0.1) * 0.8, edge * step(0.5, fract(-vPos.z / 4.0)));
-        gl_FragColor = vec4(applyFog(c, dist), 1.0);
-      }`,
-  });
-}
-
-// ---- ground far below the viaduct -------------------------------------------------
-export function groundMaterial() {
-  return new THREE.ShaderMaterial({
-    uniforms: { ...G },
-    vertexShader: VERT_HEAD + /* glsl */ `
-      void main(){
-        vec4 mv = modelViewMatrix * vec4(position, 1.0);
-        vView = mv.xyz; vPos = position;
-        gl_Position = projectionMatrix * mv;
-      }`,
-    fragmentShader: FRAG_COMMON + /* glsl */ `
-      varying vec3 vView; varying vec3 vPos;
-      void main(){
-        float dist = length(vView);
-        vec2 g = abs(fract(vPos.xz / 70.0) - 0.5) * 70.0;
-        float road = 1.0 - step(3.0, min(g.x, g.y));
-        float dash = step(0.5, fract((vPos.x + vPos.z) / 9.0));
-        vec3 c = mix(vec3(0.025, 0.032, 0.06), vec3(0.6, 0.32, 0.1) * (0.4 + 0.4 * dash), road);
-        c += vec3(0.1, 0.12, 0.2) * uFlash;
-        gl_FragColor = vec4(applyFog(c, dist), 1.0);
+        gl_FragColor = vec4(applyFog(c, dist, vW.y), 1.0);
       }`,
   });
 }
@@ -503,7 +488,7 @@ export function skyMaterial() {
           c += vec3(0.75, 0.5, 0.28) * wl * 0.55;
           c += vec3(0.9, 0.15, 0.1) * step(bh - 0.004, d.y) * step(0.8, h21(vec2(bi, 21.0))) * step(0.4, fract(bx)) * step(fract(bx), 0.6);
         }
-        c = mix(c, uFogColor, smoothstep(0.035, 0.0, d.y));
+        c = mix(c, uFogColor + vec3(0.05, 0.022, 0.0) * smoothstep(0.0, -0.25, d.y), smoothstep(0.035, 0.0, d.y));
         c += uFlash * vec3(0.2, 0.24, 0.42) * (0.3 + t);
         float l = dot(c, vec3(0.299, 0.587, 0.114));
         c = mix(vec3(l), c, 0.82) * 0.96;
@@ -521,7 +506,9 @@ export function signMaterial(atlas) {
       attribute float aCell; varying float vFl;
       void main(){
         mat4 m = modelM();
-        vec4 mv = viewMatrix * (m * vec4(position, 1.0));
+        vec4 wp = m * vec4(position, 1.0);
+        vW = wp.xyz;
+        vec4 mv = viewMatrix * wp;
         vView = mv.xyz;
         float cx = mod(aCell, 4.0); float cy = floor(aCell / 4.0);
         vUv = (vec2(cx, cy) + uv) / vec2(4.0, 8.0);
@@ -529,13 +516,13 @@ export function signMaterial(atlas) {
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: FRAG_COMMON + /* glsl */ `
-      varying vec3 vView; varying vec2 vUv;
+      varying vec3 vView; varying vec2 vUv; varying vec3 vW;
       uniform sampler2D uMap; varying float vFl;
       void main(){
         float fl = floor(vFl * 64.0);
         float buzz = step(48.0, fl) * step(0.82, fract(sin(floor(uTime * 14.0) * (fl + 1.0) * 1.37) * 4375.85)); // some tubes are dying
         vec3 c = texture2D(uMap, vUv).rgb * (1.0 + uBeat * 0.3) * (1.0 - 0.75 * buzz);
-        gl_FragColor = vec4(applyFog(c, length(vView)), 1.0);
+        gl_FragColor = vec4(applyFog(c, length(vView), vW.y), 1.0);
       }`,
   });
 }
@@ -547,18 +534,20 @@ export function trafficMaterial() {
     vertexShader: /* glsl */ `
       attribute vec3 aA; attribute vec3 aB; attribute vec2 aP; attribute vec3 aCol;
       uniform float uTime;
-      varying vec3 vCol; varying vec3 vView;
+      varying vec3 vCol; varying vec3 vView; varying vec3 vW;
       void main(){
         float f = fract(aP.x + uTime * aP.y);
         vec3 l = position * vec3(1.3, 0.55, 3.6);
         if (abs(aB.x) > abs(aB.z)) l = l.zyx;
-        vec4 mv = modelViewMatrix * vec4(aA + aB * f + l, 1.0);
+        vec3 lp = aA + aB * f + l;
+        vW = (modelMatrix * vec4(lp, 1.0)).xyz;
+        vec4 mv = modelViewMatrix * vec4(lp, 1.0);
         vView = mv.xyz; vCol = aCol;
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: FRAG_COMMON + /* glsl */ `
-      varying vec3 vCol; varying vec3 vView;
-      void main(){ gl_FragColor = vec4(applyFog(vCol, length(vView)), 1.0); }`,
+      varying vec3 vCol; varying vec3 vView; varying vec3 vW;
+      void main(){ gl_FragColor = vec4(applyFog(vCol, length(vView), vW.y), 1.0); }`,
   });
 }
 
