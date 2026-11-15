@@ -67,8 +67,16 @@ export function buildTrain(scene) {
   parts.push(box(1.9, 0.02, 0.12, [0, 0.02, -0.95], haz));
   parts.push(box(1.9, 0.02, 0.12, [0, 0.02, 0.95], haz));
 
-  const mesh = new THREE.Mesh(merge(parts), toon({ vertexColors: true, ink: true, glowAttr: true, beatGlow: 0.9, minLit: 0.3 }));
+  const mesh = new THREE.Mesh(merge(parts), toon({ vertexColors: true, ink: true, glowAttr: true, beatGlow: 0.9, minLit: 0.3, detail: 0.8, pulse: true }));
   mesh.frustumCulled = false;
   scene.add(mesh);
+  // headlight beam thrown down the track
+  const bg = new THREE.BufferGeometry();
+  const y = -3.93, z0 = -10.6, z1 = -85;
+  bg.setAttribute('position', new THREE.Float32BufferAttribute([-1.5, y, z0, 1.5, y, z0, 4.4, y, z1, -1.5, y, z0, 4.4, y, z1, -4.4, y, z1], 3));
+  bg.setAttribute('color', new THREE.Float32BufferAttribute([0.13, 0.115, 0.07, 0.13, 0.115, 0.07, 0, 0, 0, 0.13, 0.115, 0.07, 0, 0, 0, 0, 0, 0], 3));
+  const beam = new THREE.Mesh(bg, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, toneMapped: false, side: THREE.DoubleSide }));
+  beam.frustumCulled = false; beam.renderOrder = 1;
+  scene.add(beam);
   return mesh;
 }

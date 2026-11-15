@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { toon, col } from './materials.js';
+import { toon, col, G } from './materials.js';
 import { starGeometry } from './geo.js';
 
 const FIRE_MAX = 160, SMOKE_MAX = 80, DEBRIS_MAX = 160, TRACER_MAX = 40;
@@ -83,6 +83,7 @@ export function createFx(scene, camera) {
     while (P.fire.length > FIRE_MAX) P.fire.shift();
     while (P.smoke.length > SMOKE_MAX) P.smoke.shift();
     while (P.debris.length > DEBRIS_MAX) P.debris.shift();
+    light(pos, 1.5 * k, 0.8 * k, 0.3 * k, big ? 18 : 13, 0.3);
     const st = stars[starI++ % stars.length];
     st.m.position.copy(pos); st.age = 0; st.size = 2.6 * k; st.m.rotation.z = Math.random() * 6.28;
     st.m.material.color.setHex(big ? 0xffffff : 0xfff2a8);
@@ -100,6 +101,15 @@ export function createFx(scene, camera) {
   function tracer(a, b) {
     P.tracer.push({ a: a.clone(), b: b.clone(), age: 0, life: 0.07 });
     while (P.tracer.length > TRACER_MAX) P.tracer.shift();
+  }
+
+  // real point lights: a pool of four, reused oldest-first
+  const lights = [0, 1, 2, 3].map(() => ({ age: 9, life: 0.1, r: 0, g: 0, b: 0 }));
+  let lightI = 0;
+  function light(pos, r, g, b, radius, life) {
+    const i = lightI++ % 4, L = lights[i];
+    L.age = 0; L.life = life; L.r = r; L.g = g; L.b = b;
+    G.uPLpos.value[i].set(pos.x, pos.y, pos.z, radius);
   }
 
   function playerHit() { hitA = 0.42; }
@@ -166,6 +176,12 @@ export function createFx(scene, camera) {
       w.m.material.opacity = u > 0.75 ? 1 - (u - 0.75) / 0.25 : 1;
     }
 
+    lights.forEach((L, i) => {
+      L.age += dt;
+      const k = Math.max(0, 1 - L.age / L.life);
+      G.uPLcol.value[i].set(L.r * k, L.g * k, L.b * k);
+    });
+
     hitA = Math.max(0, hitA - dt * 1.6);
     hitQuad.visible = hitA > 0.01;
     hitQuad.material.opacity = hitA;
@@ -175,8 +191,9 @@ export function createFx(scene, camera) {
     for (const k in P) P[k].length = 0;
     for (const s of stars) s.age = 9;
     for (const w of words) w.age = 9;
+    for (const L of lights) L.age = 9;
     hitA = 0;
   }
 
-  return { explode, word, tracer, playerHit, update, reset };
+  return { explode, word, tracer, playerHit, light, update, reset };
 }

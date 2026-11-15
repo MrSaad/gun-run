@@ -57,7 +57,7 @@ export function buildSchedule() {
 
 export function createRobots(scene) {
   const geo = robotGeometry();
-  const mesh = new THREE.InstancedMesh(geo, toon({ vertexColors: true, glowAttr: true, tintGlow: true, beatGlow: 0.5, minLit: 0.5 }), MAX);
+  const mesh = new THREE.InstancedMesh(geo, toon({ vertexColors: true, glowAttr: true, tintGlow: true, beatGlow: 0.5, minLit: 0.5, detail: 2.2 }), MAX);
   const hull = new THREE.InstancedMesh(geo, toon({ hull: 0.035 }), MAX);
   hull.instanceMatrix = mesh.instanceMatrix;
   const white = new THREE.Color(1, 1, 1);

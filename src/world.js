@@ -346,8 +346,12 @@ export function buildWorld(scene) {
     return mesh;
   };
   inst('build', unit, buildingMaterial());
-  inst('prop', unit, toon({ ink: true }));
-  inst('glow', unit, toon({ allGlow: true, beatGlow: 0.6 }));
+  inst('prop', unit, toon({ ink: true, detail: 0.45 }));
+  const glowMesh = inst('glow', unit, toon({ allGlow: true, beatGlow: 0.6 }));
+  // flat two-tone halo around every neon element (cheap stand-in for bloom)
+  const halo = new THREE.InstancedMesh(unit, toon({ halo: 0.3, haloStrength: 0.26 }), lists.glow.length);
+  halo.instanceMatrix = glowMesh.instanceMatrix; halo.instanceColor = glowMesh.instanceColor;
+  halo.frustumCulled = false; halo.renderOrder = 2; group.add(halo);
   const signGeo = new THREE.PlaneGeometry(1, 1);
   const signMesh = inst('sign', signGeo, signMaterial(makeSignAtlas()));
   signMesh.geometry.setAttribute('aCell', new THREE.InstancedBufferAttribute(new Float32Array(lists.sign.map((s) => s.extra)), 1));
@@ -441,7 +445,7 @@ export function buildWorld(scene) {
     env.near += (e.near - env.near) * k; env.far += (e.far - env.far) * k;
     env.storm += (e.storm - env.storm) * k; env.rain += (e.rain - env.rain) * k;
     G.uFogColor.value.copy(env.fog); G.uAmbient.value.copy(env.amb); G.uLightCol.value.copy(env.lc); G.uLightDir.value.copy(env.ld);
-    G.uFogNear.value = env.near; G.uFogFar.value = env.far; G.uStorm.value = env.storm;
+    G.uFogNear.value = env.near; G.uFogFar.value = env.far; G.uStorm.value = env.storm; G.uRain.value = env.rain;
 
     // beat pulse (stronger once the kick is in)
     const hasKick = beat >= B.drop1 - 1 && beat < B.score;

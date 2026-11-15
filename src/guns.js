@@ -33,7 +33,7 @@ function uziGeometry() {
 }
 
 export function createGuns({ scene, camera, fx, audio, robots, onKill, stats }) {
-  const bodyMat = toon({ vertexColors: true, ink: true, glowAttr: true, beatGlow: 1.2, minLit: 0.5 });
+  const bodyMat = toon({ vertexColors: true, ink: true, glowAttr: true, beatGlow: 1.2, minLit: 0.5, detail: 7.0 });
   const hullMat = toon({ hull: 0.0045 });
   const flashMat = new THREE.MeshBasicMaterial({ color: 0xffe066, fog: false, toneMapped: false, side: THREE.DoubleSide, depthWrite: false, transparent: true, blending: THREE.AdditiveBlending });
   const coreMat = new THREE.MeshBasicMaterial({ color: 0xffffff, fog: false, toneMapped: false, side: THREE.DoubleSide, depthWrite: false });
@@ -81,6 +81,7 @@ export function createGuns({ scene, camera, fx, audio, robots, onKill, stats }) 
     const rb = robots.hitTest(origin, dir);
     if (rb) end.copy(rb.pos); else end.copy(origin).addScaledVector(dir, 140);
     fx.tracer(mp, end);
+    fx.light(mp, 1.1, 0.85, 0.4, uzi ? 4.5 : 6.5, uzi ? 0.05 : 0.09);
     stats.shots++;
     g.kick = uzi ? 0.55 : 1;
     g.flashT = uzi ? 0.045 : 0.065;
