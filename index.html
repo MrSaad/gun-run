@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gun Run</title>
+<style>
+  :root { --cyan: #22e6ff; --pink: #ff2bd0; --yellow: #ffe21f; --ink: #05050c; }
+  html, body { margin: 0; height: 100%; background: var(--ink); overflow: hidden; }
+  body { font-family: "Arial Black", Impact, "Helvetica Neue", Arial, sans-serif; color: #fff; }
+  canvas { display: block; }
+  #overlay {
+    position: fixed; inset: 0; z-index: 10; overflow-y: auto;
+    background:
+      radial-gradient(circle at 50% -10%, rgba(255, 43, 208, .35), transparent 55%),
+      repeating-linear-gradient(115deg, rgba(34, 230, 255, .05) 0 2px, transparent 2px 22px),
+      rgba(5, 5, 12, .9);
+    display: flex; align-items: center; justify-content: center;
+  }
+  #overlay.hidden { display: none; }
+  .card { width: min(920px, 100%); padding: 28px 20px 36px; box-sizing: border-box; text-align: center; }
+  h1 {
+    margin: 0; font-size: clamp(64px, 14vw, 150px); line-height: .9; font-style: italic; letter-spacing: -2px;
+    color: var(--yellow); -webkit-text-stroke: 3px #000; text-shadow: 7px 7px 0 var(--pink), 12px 12px 0 #000;
+    transform: rotate(-3deg) skewX(-6deg);
+  }
+  .tag { margin: 22px 0 26px; font: 700 17px/1.4 Arial, sans-serif; color: #b9c4dc; letter-spacing: 3px; text-transform: uppercase; }
+  .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin: 0 0 26px; padding: 0; list-style: none; }
+  .steps li {
+    background: #0d0d1c; border: 3px solid #000; outline: 2px solid var(--cyan); outline-offset: -7px;
+    padding: 20px 16px 18px; transform: skewX(-4deg); text-align: left;
+  }
+  .steps li:nth-child(2) { outline-color: var(--yellow); }
+  .steps li:nth-child(3) { outline-color: var(--pink); }
+  .steps b { display: block; font-size: 22px; font-style: italic; margin-bottom: 6px; color: var(--cyan); }
+  .steps li:nth-child(2) b { color: var(--yellow); }
+  .steps li:nth-child(3) b { color: var(--pink); }
+  .steps span { font: 400 15px/1.45 Arial, sans-serif; color: #d5dcec; }
+  .steps .n { float: right; font-size: 44px; line-height: .8; color: rgba(255, 255, 255, .13); font-style: italic; }
+  .buttons { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  button {
+    font: inherit; font-style: italic; font-size: 24px; padding: 14px 30px; cursor: pointer; color: #000;
+    background: var(--yellow); border: 3px solid #000; box-shadow: 6px 6px 0 var(--pink); transform: skewX(-6deg);
+  }
+  button.alt { background: var(--cyan); box-shadow: 6px 6px 0 #000; font-size: 18px; }
+  button:disabled { background: #555a66; color: #1c1c22; box-shadow: 6px 6px 0 #000; cursor: default; }
+  button:not(:disabled):active { transform: skewX(-6deg) translate(3px, 3px); box-shadow: 3px 3px 0 var(--pink); }
+  .note { margin-top: 20px; font: 400 13px/1.5 Arial, sans-serif; color: #7f8aa3; }
+  #status { min-height: 18px; margin-top: 10px; font: 700 14px Arial, sans-serif; color: #ff6a5a; }
+  #crosshair {
+    display: none; position: fixed; left: 50%; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; z-index: 5; pointer-events: none;
+    border: 2px solid var(--cyan); border-radius: 50%; box-sizing: border-box;
+  }
+  #crosshair::after { content: ""; position: absolute; left: 50%; top: 50%; width: 2px; height: 2px; margin: -1px; background: #fff; }
+</style>
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
+</head>
+<body>
+<div id="overlay">
+  <div class="card">
+    <h1>GUN RUN</h1>
+    <p class="tag">Ride the train. Shoot to the beat.</p>
+    <ol class="steps">
+      <li><span class="n">1</span><b>SHOOT</b><span>A gun in each hand. Point at a drone and pull the trigger. One pull, one shot.</span></li>
+      <li><span class="n">2</span><b>ON THE BEAT</b><span>Kills that land on the beat score 1.5× and explode bigger. Chain kills to build your multiplier up to ×8.</span></li>
+      <li><span class="n">3</span><b>DON'T GET HIT</b><span>A drone that reaches you resets your combo. Late in the run your pistols become uzis: hold the triggers.</span></li>
+    </ol>
+    <div class="buttons">
+      <button id="btn-vr" disabled>ENTER VR</button>
+      <button id="btn-desktop" class="alt">PLAY ON DESKTOP</button>
+    </div>
+    <div id="status">Loading track…</div>
+    <p class="note">Stand up with a little room around you. One song, about three and a half minutes.<br>Contains fast motion and flashing lights. Desktop: mouse to aim, click to shoot.</p>
+  </div>
+</div>
+<div id="crosshair"></div>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

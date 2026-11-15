@@ -1,0 +1,48 @@
+import * as THREE from 'three';
+import { merge, box } from './geo.js';
+import { toon } from './materials.js';
+
+// The train is fixed to the player; the world slides past it. Roof top is y = 0.
+export function buildTrain(scene) {
+  const steel = 0x4a5263, dark = 0x2a2e39, roof = 0x596275, haz = 0xf2b21c, cyan = 0x22e6ff, red = 0xff3b1f;
+  const parts = [];
+  const car = (z0, z1, lead) => {
+    const len = z1 - z0, cz = (z0 + z1) / 2;
+    parts.push(box(3.0, 3.5, len, [0, -1.85, cz], steel));
+    parts.push(box(3.1, 0.1, len, [0, -0.05, cz], roof));
+    parts.push(box(2.6, 0.5, len - 1, [0, -3.75, cz], dark));
+    // roof edge rails + glow strips that pulse with the beat
+    for (const sx of [-1, 1]) {
+      parts.push(box(0.1, 0.1, len, [sx * 1.5, 0.05, cz], haz));
+      parts.push(box(0.05, 0.05, len - 0.4, [sx * 1.36, 0.03, cz], cyan, { glow: 1, ink: false }));
+      parts.push(box(0.06, 0.5, len - 1.2, [sx * 1.53, -1.2, cz], cyan, { glow: 1, ink: false }));
+    }
+    // vents / roof clutter (kept low so nothing blocks the view)
+    const n = Math.floor(len / 5);
+    for (let i = 0; i < n; i++) {
+      const z = z0 + 3 + i * 5;
+      if (lead && Math.abs(z) < 2.2) continue; // keep the player's standing area clear
+      parts.push(box(1.1, 0.22, 1.4, [(i % 2 ? 0.6 : -0.6), 0.11, z], dark));
+    }
+  };
+  car(-7, 13, true);
+  car(13.7, 33.7, false);
+  car(34.4, 54.4, false);
+  // nose
+  parts.push(box(2.8, 2.5, 3.2, [0, -2.35, -8.6], steel));
+  parts.push(box(2.9, 0.5, 3.4, [0, -3.7, -8.8], haz));
+  parts.push(box(2.6, 1.2, 0.1, [0, -1.6, -7.02], 0x10131c, { rot: [0, 0, 0] }));
+  for (const sx of [-1, 1]) {
+    parts.push(box(0.5, 0.3, 0.1, [sx * 0.9, -2.9, -10.22], 0xfff2c0, { glow: 1, ink: false }));
+    parts.push(box(0.12, 0.12, 0.1, [sx * 1.3, -2.3, -10.22], red, { glow: 1, ink: false }));
+  }
+  // standing pad
+  parts.push(box(1.8, 0.03, 1.8, [0, 0.015, 0], 0x343a48));
+  parts.push(box(1.9, 0.02, 0.12, [0, 0.02, -0.95], haz));
+  parts.push(box(1.9, 0.02, 0.12, [0, 0.02, 0.95], haz));
+
+  const mesh = new THREE.Mesh(merge(parts), toon({ vertexColors: true, ink: true, glowAttr: true, beatGlow: 0.9 }));
+  mesh.frustumCulled = false;
+  scene.add(mesh);
+  return mesh;
+}
