@@ -81,7 +81,7 @@ function resetRun() {
   audio.stopSong();
 }
 function toReady() { resetRun(); state = 'ready'; idleT = 0; }
-function toMenu() { resetRun(); state = 'menu'; $('overlay').classList.remove('hidden');  }
+function toMenu() { resetRun(); state = 'menu'; $('overlay').classList.remove('hidden'); $('crosshair').style.display = 'none';  }
 
 function startRun() {
   if (!audio.loaded) return;
@@ -127,19 +127,18 @@ renderer.xr.addEventListener('sessionend', () => {
   toMenu();
 });
 
-// The game is VR-only. Mouse look/click exists solely for the ?auto dev shortcut (testing without a headset).
+// desktop (offered only when no VR headset is detected): mouse look + click
 let yaw = 0, pitch = 0, alt = 0;
 const canvas = renderer.domElement;
-const devMode = params.has('auto');
-if (devMode) canvas.addEventListener('mousedown', (e) => {
+canvas.addEventListener('mousedown', (e) => {
   if (renderer.xr.isPresenting || state === 'menu') return;
   if (document.pointerLockElement !== canvas) canvas.requestPointerLock?.();
   if (state === 'playing' && guns.uzi) { trigger(0, true); trigger(1, true); }
   else { alt = 1 - alt; trigger(alt, true); guns.release(alt); }
   e.preventDefault();
 });
-if (devMode) window.addEventListener('mouseup', () => { guns.release(0); guns.release(1); });
-if (devMode) window.addEventListener('mousemove', (e) => {
+window.addEventListener('mouseup', () => { guns.release(0); guns.release(1); });
+window.addEventListener('mousemove', (e) => {
   if (document.pointerLockElement !== canvas) return;
   yaw -= e.movementX * 0.0022; pitch = Math.max(-1.2, Math.min(1.2, pitch - e.movementY * 0.0022));
 });
@@ -150,24 +149,31 @@ window.addEventListener('resize', () => {
 });
 
 // ---------------------------------------------------------------- menu
-const vrBtn = $('btn-vr'), statusEl = $('status');
+const vrBtn = $('btn-vr'), deskBtn = $('btn-desktop'), statusEl = $('status'), noteEl = $('note');
 function enterGame() {
   audio.ctx.resume();
   $('overlay').classList.add('hidden');
   toReady();
 }
-let vrReady = false;
-function noVR() {
-  vrBtn.textContent = 'VR HEADSET REQUIRED';
-  statusEl.textContent = 'Gun Run is VR only. Open this page in the Meta Quest browser.';
+// Offer exactly one way in: Enter VR when a headset is available, otherwise desktop play.
+function offerVR() {
+  vrBtn.hidden = false;
+  noteEl.textContent = 'Stand up with a little room around you. Contains fast motion and flashing lights.';
+}
+function offerDesktop() {
+  deskBtn.hidden = false;
+  noteEl.textContent = 'Mouse to aim, click to shoot. Contains fast motion and flashing lights.';
 }
 if (navigator.xr && navigator.xr.isSessionSupported) {
-  navigator.xr.isSessionSupported('immersive-vr').then((ok) => {
-    if (ok) { vrBtn.disabled = false; vrReady = true; } else noVR();
-  }).catch(noVR);
+  navigator.xr.isSessionSupported('immersive-vr').then((ok) => (ok ? offerVR() : offerDesktop())).catch(offerDesktop);
 } else {
-  window.isSecureContext ? noVR() : (vrBtn.textContent = 'VR NEEDS HTTPS');
+  offerDesktop();
 }
+deskBtn.addEventListener('click', () => {
+  enterGame();
+  $('crosshair').style.display = 'block';
+  canvas.requestPointerLock?.();
+});
 vrBtn.addEventListener('click', async () => {
   try {
     const session = await navigator.xr.requestSession('immersive-vr', { optionalFeatures: ['local-floor', 'bounded-floor'] });

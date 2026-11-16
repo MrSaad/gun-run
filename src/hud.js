@@ -72,8 +72,8 @@ export function createHud(scene) {
       comic(g, 'Kill on the beat for bonus points', 512, 318, 44, '#ffc24a', '#000', 0.2);
       comic(g, 'Don\'t let them touch you — it breaks your combo', 512, 398, 34, '#4ea0ff', '#000', 0.2);
     } else if (kind === 'uzi') {
-      comic(g, 'UZIS ONLINE', 512, 190, 140, '#ff8a2a');
-      comic(g, 'HOLD THE TRIGGERS — FULL AUTO', 512, 350, 52, '#ffffff');
+      comic(g, 'GUNS UPGRADED', 512, 200, 124, '#ff8a2a');
+      comic(g, 'Hold down trigger for full auto fire.', 512, 350, 52, '#ffffff', '#000', 0.2);
     } else if (kind === 'results') {
       comic(g, 'RUN COMPLETE', 512, 76, 74, '#ffc24a');
       comic(g, String(data.score).padStart(6, '0'), 400, 210, 150, '#ffffff');

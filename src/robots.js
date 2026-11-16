@@ -72,11 +72,11 @@ function swarmGeometry() {
   return merge(parts);
 }
 
-// hp: [pistol phase, uzi phase]. rad is the hit sphere. rim is the silhouette highlight.
+// Every enemy dies in one hit. rad is the hit sphere. rim is the silhouette highlight.
 const TYPES = {
   scout: { geo: scoutGeometry, max: 30, hp: [1, 1], pts: 100, rad: 0.62, rim: 0xff4a2a, boom: 1 },
   dart: { geo: dartGeometry, max: 20, hp: [1, 1], pts: 150, rad: 0.58, rim: 0xff4a2a, boom: 0.9 },
-  brute: { geo: bruteGeometry, max: 8, hp: [3, 7], pts: 400, rad: 1.05, rim: 0xffa040, boom: 1.9 },
+  brute: { geo: bruteGeometry, max: 8, hp: [1, 1], pts: 200, rad: 1.05, rim: 0xffa040, boom: 1.9 },
   swarm: { geo: swarmGeometry, max: 45, hp: [1, 1], pts: 60, rad: 0.42, rim: 0xffd0a0, boom: 0.6 },
 };
 
@@ -89,13 +89,19 @@ export function buildSchedule() {
     const arr = spawn + travel;
     if ((arr >= B.break1 && arr < 271) || (arr >= B.break2 && arr < 367)) return;
     const tunnel = inTunnelBeat(arr) || inTunnelBeat(arr - 1.5) || inTunnelBeat(spawn);
-    const xr = tunnel ? 3.4 : 6.5, yr = tunnel ? 2.6 : 4.2;
+    // In the city most enemies come in from straight ahead, like in the tunnels; about a quarter
+    // are flankers that swing in from the sides and above.
+    const flank = !tunnel && type !== 'brute' && extra.x === undefined && r() < 0.25;
+    const xr = tunnel ? 3.4 : flank ? 6 : 3.6, yr = tunnel ? 2.6 : flank ? 3.4 : 2.8;
     let x = extra.x ?? (r() * 2 - 1) * xr;
     if (extra.x === undefined && Math.abs(x - lastX) < 1.5) x = -x * 0.9 + (x > 0 ? -0.8 : 0.8);
     lastX = x;
-    const far = type === 'brute' ? 9 + r() * 4 : 6.5 + r() * 6;
-    const hover = new THREE.Vector3(x, extra.y ?? 0.9 + r() * yr, -far);
-    const start = new THREE.Vector3(tunnel ? x * 1.1 : x * 3 + (r() - 0.5) * 30, tunnel ? 1 + r() * 3 : 4 + r() * 22, -(125 + r() * 20));
+    const far = type === 'brute' ? 10 + r() * 4 : tunnel ? 6.5 + r() * 6 : 8 + r() * 6;
+    const hover = new THREE.Vector3(x, extra.y ?? (tunnel ? 0.9 : 1.0) + r() * yr, -far);
+    const side = x < 0 ? -1 : 1;
+    const start = tunnel ? new THREE.Vector3(x * 1.1, 1 + r() * 3, -(125 + r() * 20))
+      : flank ? new THREE.Vector3(side * (35 + r() * 25), 8 + r() * 18, -(40 + r() * 50))
+      : new THREE.Vector3(x * 1.6 + (r() - 0.5) * 8, 2 + r() * 8, -(125 + r() * 20));
     const T = TYPES[type];
     list.push({
       type, spawn, arr, hover, start, ph: extra.ph ?? r() * 6.28, slot: extra.slot ?? 0,
@@ -104,7 +110,7 @@ export function buildSchedule() {
     });
   };
   const swarm = (spawn, travel) => {
-    const x = (r() * 2 - 1) * 5, y = 1.5 + r() * 3.5, ph = r() * 6.28;
+    const x = (r() * 2 - 1) * 3.2, y = 1.5 + r() * 2.5, ph = r() * 6.28;
     for (let k = 0; k < 3; k++) add(spawn, travel, 'swarm', { x, y, ph, slot: k });
   };
 
