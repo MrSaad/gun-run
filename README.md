@@ -49,3 +49,14 @@ tunnel rings, gantries and signs stay locked to the music at any train speed.
 
 Add to the URL: `?auto` skips the start page, `?t=110` starts the song at
 110 seconds, `?bot` auto-aims and fires (desktop).
+
+## Publishing changes
+
+GitHub Pages caches files for 10 minutes. `index.html` loads every script
+through content-hashed URLs listed in `version.json`, so players get the new
+code on a normal reload. After changing any `.js` file, run this before
+committing:
+
+```bash
+python3 tools/stamp.py
+```

@@ -43,7 +43,21 @@
   .note { margin-top: 20px; font: 400 13px/1.5 Arial, sans-serif; color: #7f8aa3; }
   #status { min-height: 18px; margin-top: 10px; font: 700 14px Arial, sans-serif; color: #ff6a5a; }
 </style>
-<script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
+<script>
+  // Load the game with content-versioned script URLs (see tools/stamp.py), so updates show up on a normal reload.
+  (function () {
+    function boot(map, main) {
+      var im = document.createElement('script'); im.type = 'importmap'; im.textContent = JSON.stringify({ imports: map });
+      document.head.appendChild(im);
+      var s = document.createElement('script'); s.type = 'module'; s.src = main;
+      document.head.appendChild(s);
+    }
+    fetch('./version.json', { cache: 'no-store' })
+      .then(function (r) { return r.json(); })
+      .then(function (v) { boot(v.imports, v.main); })
+      .catch(function () { boot({ three: './vendor/three.module.min.js' }, './src/main.js?v=' + Date.now()); });
+  })();
+</script>
 </head>
 <body>
 <div id="overlay">
@@ -58,6 +72,5 @@
   </div>
 </div>
 <div id="crosshair"></div>
-<script type="module" src="./src/main.js"></script>
 </body>
 </html>

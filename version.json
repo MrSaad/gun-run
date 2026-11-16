@@ -1,0 +1,18 @@
+{
+  "main": "./src/main.js?v=741c8e9eac",
+  "imports": {
+    "three": "./vendor/three.module.min.js?v=512c8b83df",
+    "./src/audio.js": "./src/audio.js?v=033e57ff64",
+    "./src/cars.js": "./src/cars.js?v=0d3ace904d",
+    "./src/fx.js": "./src/fx.js?v=03c7a1bcf5",
+    "./src/geo.js": "./src/geo.js?v=aa03be40f1",
+    "./src/guns.js": "./src/guns.js?v=a5de77b7e3",
+    "./src/hud.js": "./src/hud.js?v=b84a050af0",
+    "./src/main.js": "./src/main.js?v=741c8e9eac",
+    "./src/materials.js": "./src/materials.js?v=d759f749ec",
+    "./src/robots.js": "./src/robots.js?v=7661fdd104",
+    "./src/timeline.js": "./src/timeline.js?v=900b53f101",
+    "./src/train.js": "./src/train.js?v=8580e64437",
+    "./src/world.js": "./src/world.js?v=1ae0be78ab"
+  }
+}
