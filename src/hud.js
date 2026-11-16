@@ -10,9 +10,13 @@ function panel(w, h, pw, ph) {
   mesh.renderOrder = 30;
   return { mesh, g, tex, pw, ph };
 }
-function comic(g, text, x, y, size, fill, stroke = '#000', lw = 0.16, align = 'center') {
+// Comic-style outlined text. Shrinks to fit maxW, since fonts render at different widths per device.
+function comic(g, text, x, y, size, fill, stroke = '#000', lw = 0.16, align = 'center', maxW = 0) {
   g.save();
   g.font = `italic 900 ${size}px ${FONT}`;
+  const limit = maxW || (align === 'center' ? Math.min(2 * x, 2 * (g.canvas.width - x)) * 0.86 : g.canvas.width * 0.86);
+  const w = g.measureText(text).width + size * lw;
+  if (w > limit) { size *= limit / w; g.font = `italic 900 ${size}px ${FONT}`; }
   g.textAlign = align; g.textBaseline = 'middle'; g.lineJoin = 'round';
   g.strokeStyle = stroke; g.lineWidth = size * lw; g.strokeText(text, x, y);
   g.fillStyle = fill; g.fillText(text, x, y);
@@ -67,10 +71,9 @@ export function createHud(scene) {
       comic(g, 'Shoot the drones before they reach you', 512, 350, 36, '#4ea0ff', '#000', 0.2);
       comic(g, 'Kill on the beat for bonus points', 512, 404, 36, '#ff8a2a', '#000', 0.2);
     } else if (kind === 'intro') {
-      comic(g, 'DRONES INBOUND', 512, 130, 104, '#e8452e');
-      comic(g, 'One trigger pull = one shot', 512, 248, 44, '#ffffff', '#000', 0.2);
-      comic(g, 'Kill on the beat for bonus points', 512, 318, 44, '#ffc24a', '#000', 0.2);
-      comic(g, 'Don\'t let them touch you — it breaks your combo', 512, 398, 34, '#4ea0ff', '#000', 0.2);
+      comic(g, 'DRONES INBOUND', 512, 165, 104, '#e8452e');
+      comic(g, 'Kill on the beat for bonus points', 512, 300, 46, '#ffc24a', '#000', 0.2);
+      comic(g, 'Don\'t let them touch you — it breaks your combo', 512, 378, 36, '#4ea0ff', '#000', 0.2);
     } else if (kind === 'uzi') {
       comic(g, 'GUNS UPGRADED', 512, 200, 124, '#ff8a2a');
       comic(g, 'Hold down trigger for full auto fire.', 512, 350, 52, '#ffffff', '#000', 0.2);
